@@ -1,0 +1,97 @@
+
+body {
+
+    font-family : Arial, Helvetica, sans-serif;
+    color: #ccc;
+    background-color: #292929;
+
+}
+
+.app__header__title {
+    margin: 0;
+}
+
+.app__header__subtitle {
+    margin-top : 0.1%;
+}
+
+
+#div-mother {
+    width : 100%;
+}
+
+#div-main-mother {
+    width : 100%;
+}
+
+#div-main-left {
+    width : 30%;
+    float : left;
+    margin-left: 3%;
+}
+
+#div-main-center {
+    padding-top : 4.5%;
+    width : 33%;
+    float : left;
+}
+
+#div-main-right {
+    width : 30%;
+    float : left;
+    margin-right: 3%;
+}
+
+#div-main-top {
+    text-align : center;
+
+}
+
+#div-main-menu {
+    width : 90%;
+    float : left;
+    margin-left: 5%;
+    margin-right: 5%;
+    padding-bottom:  1%;
+    background-color: #252525;
+
+}
+
+#div-radio-partner {
+    width : 25%;
+    margin : 0 auto;
+
+}
+
+#div-radio-bracket {
+
+    width : 50%;
+    float : left;
+
+}
+
+#div-dropdown-partner {
+    width : 50%;
+    float : left;
+
+}
+
+#div-metric-selection {
+    padding-left: 20px;
+    width : 50%;
+}
+
+
+.div-class-spec {
+    width : 40%;
+    float : left;
+    margin-left : 5%;
+    margin-right: 5%;
+    margin-top : 0px;
+}
+
+
+
+.app__datatable {
+    background-color : #222;
+}

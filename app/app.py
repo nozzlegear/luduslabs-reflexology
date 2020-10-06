@@ -1,4 +1,5 @@
 import dash
+import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
 import os
@@ -12,7 +13,7 @@ import pandas as pd
 import numpy as np
 import json
 
-from layout import generate_layout
+from layout import generate_layout, BGCOLOR, FONT_COLOR
 
 baseDir = os.path.dirname(os.path.abspath(__file__)) + '/../'
 sys.path.append(baseDir)
@@ -25,16 +26,12 @@ logging.basicConfig(filename='reflex-app.log', level=logging.DEBUG)
 dataFile = '../data/REFlex.lua'
 
 # size given as (width, height)
-SPEC_GRAPH_SIZE = (600, 550)
-RATING_GRAPH_SIZE = (600, 500)
+SPEC_GRAPH_SIZE = (500, 450)
+RATING_GRAPH_SIZE = (500, 400)
 
-app = dash.Dash()
+app = dash.Dash('REFlex')
 
 app.layout = generate_layout()
-
-
-FONT_COLOR = '#cccccc'
-BGCOLOR = 'rgba(0,0,0,0)'
 
 
 def filter_data(data, partners):
@@ -322,6 +319,37 @@ def update_spec1_selection(class1, data):
             {'display' : 'inline-block'})
 
 
+@app.callback(
+    [Output('metric-rating-change', 'children'),
+     Output('metric-games-played', 'children'),
+     Output('metric-rating-change', 'style')],
+    [Input('bracket-selection', 'value'),
+     Input('data-store', 'children'),
+     Input('partner1-selection', 'value'),
+     Input('partner2-selection', 'value')]
+    )
+def update_kpis(bracket, json_data, partner1, partner2):
+
+    green = '#090'
+    red = '#900'
+    allData = json.loads(json_data)
+    partners = [p for p in [partner1, partner2] if p is not None]
+    bracketData = pd.DataFrame(allData[bracket])
+    filteredData = filter_data(bracketData, partners)
+    player, _ = analysis.get_player_and_team_mates(filteredData)
     
+    rating = analysis.get_player_rating(filteredData, player)
+
+    ratingChange = (rating.iloc[-1] - rating.iloc[0])
+    symbol = '+' if ratingChange >+ 0 else ''
+
+    ratingChangeString = '%s%i'%(symbol, ratingChange)
+    gamesPlayed = '%i'%len(rating)
+
+    ratingChangeStyle = {'color' : green if ratingChange >= 0 else red}
+
+    return ratingChangeString, gamesPlayed, ratingChangeStyle
+
+
 if __name__ == "__main__":
     app.run_server(debug=True)

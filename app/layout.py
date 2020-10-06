@@ -21,7 +21,23 @@ def generate_menu():
     return html.Div([
         html.Div([
             html.Div([
-                html.H4('Bracket'),
+                html.Div([
+                    html.P('Rating change', className='app__metric__title'),
+                    html.Hr(className='kpi-divider'),
+                    html.P('', id='metric-rating-change',
+                           className='app__metric__value')
+                ], className='div-metric-rating'),
+                
+                html.Div([
+                    html.P('Games played', className='app__metric__title'),
+                    html.Hr(className='kpi-divider'),
+                    html.P('', id='metric-games-played',
+                           className='app__metric__value')
+                ], className='div-metric-rating')
+                
+            ], id='div-metric-kpi-container'),
+            html.Div([
+                html.H4('Bracket', className='app__menu__title'),
                 dcc.RadioItems(options=[{'label': '2v2', 'value': '2v2'},
                                         {'label': '3v3', 'value': '3v3'}],
                                value='2v2', id='bracket-selection')
@@ -29,17 +45,18 @@ def generate_menu():
             
             html.Div([
                 html.H4('Filter by partner'),
-
+                
                 html.Div([
                     dcc.Dropdown(id='partner1-selection',
                                  options=[], multi=False)
-                ], id='div-dropdown-partner1'),
-
+                ], id='div-dropdown-partner1', className='dash-bootstrap'),
+                
                 html.Div([
                     dcc.Dropdown(id='partner2-selection',
                                  options=[], multi=False)
                     
-                ], id='div-dropdown-partner2', style={'display': 'none'})
+                ], id='div-dropdown-partner2', style={'display': 'none'},
+                         className='dash-bootstrap')
             ], id='div-dropdown-partner')
         ], id='div-radio-partner')
     ], id='div-main-menu')
@@ -47,14 +64,13 @@ def generate_menu():
 
 def generate_left_column():
     return html.Div([
-        
         html.Div(id='div-metric-selection', children=[
             html.H3('Metric', style={'margin-bottom': '0px'}),
             dcc.Dropdown(id='metric-selection', options=metricOptions,
-                         value='N')]),
-        
-        dcc.Graph(id='spec-graph')],
-                    id='div-main-left')
+                         value='N', multi=False, clearable=False,
+                         searchable=False)],
+                 className='dash-bootstrap'),
+        dcc.Graph(id='spec-graph')], id='div-main-left')
 
 
 def generate_central_column():
@@ -69,8 +85,9 @@ def generate_right_column():
         html.Div([
             html.H4('Class 1', style=NO_MARGIN),
             html.Div([
-                dcc.Dropdown(options=[], id='class-selection-1'),
-            ], className='div-class-selection'),
+                dcc.Dropdown(options=[], id='class-selection-1',
+                             placeholder='Class'),
+            ], className='div-class-selection dash-bootstrap'),
             html.Div([
                 dcc.Dropdown(options=[], id='spec-selection-1')
             ], className='div-class-selection',

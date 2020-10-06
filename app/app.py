@@ -13,7 +13,9 @@ import pandas as pd
 import numpy as np
 import json
 
-from layout import generate_layout, BGCOLOR, FONT_COLOR
+from layout import (generate_layout, BGCOLOR, FONT_COLOR,
+                    generate_left_column, generate_central_column,
+                    generate_right_column)
 
 baseDir = os.path.dirname(os.path.abspath(__file__)) + '/../'
 sys.path.append(baseDir)
@@ -32,6 +34,8 @@ RATING_GRAPH_SIZE = (500, 400)
 app = dash.Dash('REFlex')
 
 app.layout = generate_layout()
+
+app.config['suppress_callback_exceptions'] = True
 
 
 def filter_data(data, partners):
@@ -350,6 +354,17 @@ def update_kpis(bracket, json_data, partner1, partner2):
 
     return ratingChangeString, gamesPlayed, ratingChangeStyle
 
+@app.callback(
+    Output('tab-content', 'children'),
+    [Input('main-tab', 'value')]
+    )
+def display_tab(tab):
+    if tab == 'graph':
+        return [generate_left_column(), generate_central_column()]
+    
+    elif tab == 'comp':
+        return [generate_right_column()]
 
+    
 if __name__ == "__main__":
     app.run_server(debug=True)

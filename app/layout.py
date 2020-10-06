@@ -62,6 +62,18 @@ def generate_menu():
     ], id='div-main-menu')
 
 
+def generate_main_content():
+
+    return html.Div([dcc.Tabs(id='main-tab', value='graph',
+                     children=[
+                     dcc.Tab(label='Graphical', value='graph'),
+                     dcc.Tab(label='Compositions', value='comp')
+                 ]),
+                     html.Div(id='tab-content')],
+                    id='tab-main')
+
+
+
 def generate_left_column():
     return html.Div([
         html.Div(id='div-metric-selection', children=[
@@ -150,9 +162,7 @@ def generate_layout():
         ]),
         generate_menu(),
         html.Div([
-            generate_left_column(),
-            generate_central_column(),
-            generate_right_column()
+            generate_main_content()
         ], id='div-main-mother'),
         generate_upload_menu()
     ], id='div-mother')

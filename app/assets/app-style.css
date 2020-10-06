@@ -15,6 +15,15 @@ body {
     margin-top : 0.1%;
 }
 
+#tab-main {
+    width : 90%;
+    margin-left: 5%;
+    margin-right: 5%;
+}
+
+#tab-content {
+    width : 100%;
+}
 
 #div-mother {
     width : 100%;
@@ -26,11 +35,10 @@ body {
 }
 
 #div-main-left {
-    width : 29.66%;
+    width : 49%;
+    margin-right: 1%;
     float : left;
-    margin-left: 5%;
     background-color: #222;
-    margin-right : 0.25%;
     margin-top: 0.5%;
     flex: 1;
 
@@ -38,12 +46,12 @@ body {
 
 #div-main-center {
     padding-top : 4.5%;
-    width : 29.66%;
+    width : 49%;
     float : left;
     background-color: #222;
-    margin-left : 0.25%;
-    margin-right : 0.25%;
+    margin-left : 1%;
     margin-top: 0.5%;
+    flex: 1;
 	
 }
 

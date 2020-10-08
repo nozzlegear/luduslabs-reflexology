@@ -18,19 +18,23 @@ classColors = {
 }
 
 
-def build_win_matrix(data, alpha=0.1):
+def build_win_matrix(data, alpha=0.1, player_name=None):
 
     opponentSpecs = get_opponent_specs(data)
+    opponentSpecs.columns = ['Player%i'%k for k in opponentSpecs.columns]
+    allSpecs = pd.Series(index=list(set(opponentSpecs.values.ravel())))
+    
     opponentSpecs['ID'] = opponentSpecs.index
     opponentSpecs.loc[:, 'Win'] = get_outcome(data)
-    allSpecs = pd.Series(index=list(set(opponentSpecs.Player0)\
-                                    .union(set(opponentSpecs.Player1))),
-                         dtype=np.float)
-    
+    if player_name is None:
+        opponentSpecs.loc[:, 'rating change'] = np.zeros(data.shape[0]) + np.nan
+    else:
+        opponentSpecs.loc[:, 'rating change'] = get_player_field(data, player_name,
+                                                                 'Rating change')
+
     outcomes = pd.concat([pd.DataFrame(allSpecs)\
                           .join(opponentSpecs.set_index(player, drop=False))
-                          .drop(0, axis=1) for player in ['Player0',
-                                                          'Player1']],
+                          .drop(0, axis=1) for player in opponentSpecs.columns],
                          axis=0)
     
     outcomes.loc[:, 'CLASS/SPEC'] = outcomes.index
@@ -38,27 +42,32 @@ def build_win_matrix(data, alpha=0.1):
     outcomes = outcomes.drop_duplicates()
 
     outcomes.index.name = 'Spec'
-    G = outcomes.loc[:, 'Win'].groupby('Spec')
+    
 
-    winCount = G.sum()
-    fightCount = G.count()
+    G = outcomes.groupby('Spec')
+
+    winCount = G['Win'].sum()
+    fightCount = G['Win'].count()
 
     lossCount = fightCount - winCount
 
-    winRate = G.mean()
+    winRate = G['Win'].mean()
     d = beta(winCount.values+1, lossCount.values+1)
     winLower = pd.Series(d.ppf(alpha/2), index=winCount.index)
     winUpper = pd.Series(d.ppf(1-alpha/2), index=winCount.index)
 
-    return pd.DataFrame([winRate, winLower, winUpper, fightCount],
-                        index=['win rate', 'lower', 'upper', 'N']).T
+    avgRatingChange = G['rating change'].mean()
+
+    return pd.DataFrame([winRate, winLower, winUpper, fightCount,
+                         avgRatingChange],
+                        index=['win rate', 'lower', 'upper', 'N',
+                               'avg rating change']).T
 
 
 def get_player_field(data, name, field):
     nameCols = pd.Series([k for k in data.columns if '_Name' in k])
     def _get_player_field(x, name):
         col = [c for c in nameCols if x.loc[c] == name][0]
-        ratingCol = col.replace('_Name','_Rating')
         return x.loc[col.replace('_Name', '_'+field)]
     
     return data.apply(lambda x:_get_player_field(x, name), axis=1)
@@ -101,23 +110,34 @@ def get_player_teams(data):
 
 
 def get_opponent_specs(data):
+    is3v3 = np.any(pd.Series(data.columns).str.match('T0P2'))
+
+    nPlayers = 2 + is3v3
     t0 = ['T0P0_Class', 'T0P0_Spec', 'T0P1_Class', 'T0P1_Spec']
-    if 'T0P2_Class' in data.columns:
+
+    if is3v3:
         t0 += ['T0P2_Class', 'T0P2_Spec']
-        
+
     t1 = [t.replace('T0', 'T1') for t in t0]
-        
-    opponentSpecs = pd.DataFrame(index=data.index, columns=['Player0', 'Player1'])
+
+    opponentSpecs = pd.DataFrame(index=data.index, columns=np.arange(nPlayers))
     opponentSide = 1 - data.loc[:, 'PlayerSide']
     for p, t in enumerate([t0,t1]):
         opponent = data.loc[opponentSide == p, t]
-        opponentSpecs.loc[opponent.index, 'Player0'] = opponent.loc[:, t[1]] + ' '\
-                                                     + opponent.loc[:, t[0]]
-        opponentSpecs.loc[opponent.index, 'Player1'] = opponent.loc[:, t[3]] + ' '\
-                                                     + opponent.loc[:, t[2]]
+        for k in range(nPlayers):
+            opponentSpecs.loc[opponent.index, k] = opponent.loc[:, t[k*2+1]] +' '\
+                                                   + opponent.loc[:, t[k*2]]
     return opponentSpecs
 
 
 def get_outcome(data):
     return pd.Series(np.double(data.loc[:, 'PlayerSide'] == data.loc[:, 'Winner']),
                      index=data.index)
+
+
+def get_team_mmr(data):
+    def _get_team_mmr(x):
+        mmrCol = 'T%i_MMR'%x.PlayerSide
+        return x.loc[mmrCol]
+
+    return data.apply(_get_team_mmr, axis=1)

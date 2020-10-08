@@ -1,0 +1,46 @@
+
+/* Styling tabs */
+.menu-tab {
+    color : #000;
+    background-color : #000;
+}
+
+.menu-tab--selected {
+    color : #333;
+    background-color : #000;
+}
+
+#main-tab {
+    width : 50%;
+}
+
+#tab-container {    
+    width: 100%;
+    width : 100%;
+    float : left;
+
+}
+
+.tabs-parent {
+    color : #000;
+    background-color: #fff;
+
+}
+
+#div-tab-main {
+    width : 90%;
+    margin-left: 5%;
+    margin-right: 5%;
+}
+
+
+#div-tab-content {
+    width : 100%;
+    display: flex;
+    float : left;
+}
+
+
+#div-tab-main {
+    background-color : #fff;
+}

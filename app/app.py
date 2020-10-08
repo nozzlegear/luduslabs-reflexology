@@ -6,6 +6,8 @@ import os
 import sys
 import logging
 
+import re
+
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 
@@ -15,7 +17,7 @@ import json
 
 from layout import (generate_layout, BGCOLOR, FONT_COLOR,
                     generate_left_column, generate_central_column,
-                    generate_right_column)
+                    layout_comp_table)
 
 baseDir = os.path.dirname(os.path.abspath(__file__)) + '/../'
 sys.path.append(baseDir)
@@ -28,8 +30,8 @@ logging.basicConfig(filename='reflex-app.log', level=logging.DEBUG)
 dataFile = '../data/REFlex.lua'
 
 # size given as (width, height)
-SPEC_GRAPH_SIZE = (500, 450)
-RATING_GRAPH_SIZE = (500, 400)
+SPEC_GRAPH_SIZE = (550, 500)
+RATING_GRAPH_SIZE = (550, 450)
 
 app = dash.Dash('REFlex')
 
@@ -52,8 +54,8 @@ def filter_data(data, partners):
         return data
 
 
-def make_spec_plot(data, col):
-    winMatrix = analysis.build_win_matrix(data)
+def make_spec_plot(data, col, player_name=None):
+    winMatrix = analysis.build_win_matrix(data, player_name=player_name)
     winMatrix['Class'] = winMatrix.index
     winMatrix = winMatrix.sort_values(by=col, ascending=False)
 
@@ -63,23 +65,36 @@ def make_spec_plot(data, col):
     plotlyCols = ['rgb(%i,%i,%i)'%col for col in cols8bit]
 
 
-    return go.Figure(data=[go.Bar(
+    fig = go.Figure(data=[go.Bar(
         x=winMatrix['Class'],
         y=winMatrix[col],
         marker_color=plotlyCols
-    )], layout={'width': SPEC_GRAPH_SIZE[0],
-                'height': SPEC_GRAPH_SIZE[1],
-                'margin': {'t': 0},
+    )], layout={'margin': {'t': 0},
                 'paper_bgcolor': BGCOLOR,
                 'plot_bgcolor': BGCOLOR,
-                'font': {'color': FONT_COLOR}
-    })
+                'font': {'color': FONT_COLOR}})
+
+    fig.update_xaxes(showgrid=False)
+    fig.update_yaxes(gridcolor='rgba(255,255,255,0.2)')
+
+    return fig
+
 
 
 def make_rating_plot(data, names):
+    teamMMR = analysis.get_team_mmr(data)
+    
     fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=list(range(0, len(teamMMR)+1)),
+        y=teamMMR,
+        name='Team MMR',
+        line={'width': 2, 'color': 'rgba(200,200,200,0.5)'}
+    ))
+    
     for name in names:
         playerRating = analysis.get_player_rating(data, name)
+
         fig.add_trace(go.Scatter(
             x=list(range(0, len(playerRating)+1)),
             y=playerRating,
@@ -87,32 +102,46 @@ def make_rating_plot(data, names):
             line={'width': 3}
         ))
 
+
     fig.update_layout(xaxis_title='Games played',
                       yaxis_title='Rating',
-                      width=RATING_GRAPH_SIZE[0],
-                      height=RATING_GRAPH_SIZE[1],
                       legend=dict(yanchor='top',
-                                  y=0.99,
+                                  y=1.05,
+                                  orientation='h',
                                   xanchor='left',
-                                  x=0.01),
+                                  x=0.1),
                       margin={'t': 0},
                       paper_bgcolor=BGCOLOR,
                       plot_bgcolor=BGCOLOR,
                       font={'color': FONT_COLOR}
-    )                                  
+    )
+
+    fig.update_xaxes(gridcolor='rgba(255,255,255,0.2)')
+    fig.update_yaxes(gridcolor='rgba(255,255,255,0.2)')
 
     return fig
 
 
 def make_comp_table(data):
+    def _get_spec_markdown(x):
+        x = x.strip()
+        spec = x.split(' ')[0].lower()
+        wowclass = ''.join(x.split(' ')[1:]).lower()
+        return '![classicon](/static/icons/%s_%s.png "%s")'%(wowclass, spec, x)
+
+    def _get_comp_markdown(comp):
+        return ' '.join([_get_spec_markdown(x) for x in comp.split(',')])
+
     opponentSpecs = analysis.get_opponent_specs(data)
+
     outcomes = analysis.get_outcome(data)
     ratingChange = analysis.get_player_field(data, 'Geebs', 'Rating change')
 
-    cat_comp = lambda x:'('+', '.join(sorted([x['Player0'], x['Player1']])) +')'
-    compOutcome = pd.DataFrame([opponentSpecs.apply(cat_comp, axis=1),
+    compOutcome = pd.DataFrame([opponentSpecs
+                                .apply(lambda x:'('+', '.join(x)+')',
+                                       axis=1),
                                 outcomes]).T
-    
+
     compOutcome.columns = ['Comp', 'Win']
     compOutcome.loc[:, 'Rating change'] = ratingChange
     winCount = compOutcome.groupby('Comp')['Win'].sum()
@@ -123,7 +152,9 @@ def make_comp_table(data):
 
     comps = pd.Series(fightCount.index).apply(lambda x:x.strip('(').strip(')')).values
 
-    compTable = pd.DataFrame([comps, winCount, lossCount,
+    compsHTML = np.array([_get_comp_markdown(x) for x in comps])
+
+    compTable = pd.DataFrame([compsHTML, winCount, lossCount,
                               winRate, avgRatingChange],
                              index=['Comp', 'Wins', 'Losses', 'Win rate (%)',
                                     'Avg rating change']).T
@@ -134,6 +165,19 @@ def make_comp_table(data):
                         .drop('N', axis=1)
                         
     return sortedCompTable
+
+
+def get_player_match_count(data2v2, data3v3):
+
+    matchCountList = []
+    for data in [data2v2, data3v3]:
+        playerNameFields = [k for k in data.columns if '_Name' in k]
+        matchCount = pd.Series(data.loc[:,playerNameFields].values.ravel())\
+                     .value_counts()
+        matchCountList.append(matchCount)
+
+    combinedMatchCount = pd.DataFrame(matchCountList).fillna(0).sum(axis=0)
+    return combinedMatchCount
 
 
 @app.callback(
@@ -167,7 +211,8 @@ def update_partner_selection(json_data, bracket, partner1, partner2):
 
 
 @app.callback(
-    Output('data-store', 'children'),
+    [Output('data-store', 'children'),
+     Output('player-name', 'children')],
     [Input('upload', 'n_clicks')]
     )
 def load_data(_):
@@ -177,6 +222,14 @@ def load_data(_):
     # 2) update the partner selection option
 
     data2v2, data3v3 = rio.parse_lua_file(dataFile)
+
+    matchCount = get_player_match_count(data2v2, data3v3)
+    if np.sum(matchCount == matchCount.max()) == 1:
+        playerName = matchCount.idxmax()
+    else:
+        # Should implement some verification step here if we can't
+        # determine the player
+        playerName = 'Unknown'
                                 
     jsonData = '{"2v2":%s, "3v3":%s}'%(data2v2.to_json(),
                                        data3v3.to_json())
@@ -184,19 +237,42 @@ def load_data(_):
     size = sys.getsizeof(jsonData)/1e3
     logging.info('Data is %.2fKB in size.'%size)
 
-    return jsonData
+    return jsonData, playerName
 
 
 @app.callback(
+    Output('hidden-comp-table', 'children'),
+    [Input('partner1-selection', 'value'),
+     Input('partner2-selection', 'value'),
+     Input('bracket-selection', 'value'),
+     Input('data-store', 'children')],
+    [State('player-name', 'children')]
+    )
+def update_hidden_comp_table(partner1, partner2, bracket, json_data,
+                             player_name):
+    logging.info('Updating hidden comp table.')
+    partners = [a for a in [partner1, partner2] if a is not None]
+    allData = json.loads(json_data)
+    bracketData = pd.DataFrame(allData[bracket])
+
+    logging.info('Getting players')
+    player, _ = analysis.get_player_and_team_mates(bracketData)
+    logging.info('Filtering data')
+    filteredData = filter_data(bracketData, partners)
+
+    return make_comp_table(filteredData).to_json()
+
+@app.callback(
     [Output('spec-graph', 'figure'),
-     Output('rating-graph', 'figure'),
-     Output('hidden-comp-table', 'children')],
+     Output('rating-graph', 'figure')],
     [Input('metric-selection', 'value'),
      Input('partner1-selection', 'value'),
      Input('partner2-selection', 'value'),
      Input('bracket-selection', 'value'),
-     Input('data-store', 'children')])
-def update_plots(metric, partner1, partner2, bracket, json_data):
+     Input('data-store', 'children')],
+    [State('player-name', 'children')])
+def update_plots(metric, partner1, partner2, bracket, json_data,
+                 player_name):
     logging.info('Updating plots.')
     partners = [a for a in [partner1, partner2] if a is not None]
     allData = json.loads(json_data)
@@ -207,9 +283,8 @@ def update_plots(metric, partner1, partner2, bracket, json_data):
     logging.info('Filtering data')
     filteredData = filter_data(bracketData, partners)
 
-    return (make_spec_plot(filteredData, metric),
-            make_rating_plot(filteredData, [player]+partners),
-            make_comp_table(filteredData).to_json())
+    return (make_spec_plot(filteredData, metric, player_name),
+            make_rating_plot(filteredData, [player]+partners))
 
 
 @app.callback(
@@ -285,9 +360,12 @@ def hide_show_partner2_selection(bracket):
     )
 def update_class1_selection(data):
     df = pd.DataFrame(data)
-    classesSpecs = df.Comp.str.split(',').explode().str.strip()
-    classes = classesSpecs.apply(lambda x: ' '.join(x.split(' ')[1:]))
-    return [{'label': c, 'value': c} for c in set(classes)]
+    classes = df.Comp.str.findall('"(.*?)"')\
+                         .explode().str.strip()\
+                                       .apply(lambda x: x.split(' ')[-1])
+    
+    classSelection = [{'label': c, 'value': c} for c in set(classes)]
+    return classSelection
 
 @app.callback(
     [Output('spec-selection-1', 'options'),
@@ -302,6 +380,7 @@ def update_spec1_selection(class1, data):
         return [], {'display': 'none'}, [], {'display': 'none'}
     
     df = pd.DataFrame(data)
+    print(df.head(10))
     classesSpecs = df.Comp.str.split(',').explode().str.strip()
     classes = classesSpecs.apply(lambda x: ' '.join(x.split(' ')[1:]))
     specs = classesSpecs.apply(lambda x:x.split(' ')[0])
@@ -320,7 +399,7 @@ def update_spec1_selection(class1, data):
     return ([{'label': c, 'value': c} for c in set(specsForCurrentClass)],
             {'display': 'inline-block'},
             [{'label': c, 'value': c} for c in set(partnerClassesForCurrentClass)],
-            {'display' : 'inline-block'})
+            {'display': 'inline-block'})
 
 
 @app.callback(
@@ -354,8 +433,9 @@ def update_kpis(bracket, json_data, partner1, partner2):
 
     return ratingChangeString, gamesPlayed, ratingChangeStyle
 
+
 @app.callback(
-    Output('tab-content', 'children'),
+    Output('div-tab-content', 'children'),
     [Input('main-tab', 'value')]
     )
 def display_tab(tab):
@@ -363,7 +443,7 @@ def display_tab(tab):
         return [generate_left_column(), generate_central_column()]
     
     elif tab == 'comp':
-        return [generate_right_column()]
+        return [layout_comp_table()]
 
     
 if __name__ == "__main__":

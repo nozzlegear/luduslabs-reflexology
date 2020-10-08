@@ -10,11 +10,21 @@ TABLE_HEIGHT = 450
 
 metricOptions = [
     {'label': 'Games played', 'value': 'N'},
-    {'label': 'Win rate', 'value': 'win rate'}]
+    {'label': 'Win rate', 'value': 'win rate'},
+    {'label': 'Average rating change', 'value': 'avg rating change'}]
 
 tableColumns = ['Comp', 'Wins', 'Losses', 'Win rate (%)', 'Avg rating change']
 
 NO_MARGIN = {'margin': '0px'}
+
+
+TAB_STYLE = {'backgroundColor': '#111',
+             'borderBottom': '0',
+             'color': '#fff'}
+
+SELECTED_TAB_STYLE = {'backgroundColor': '#222',
+                      'borderBottom': '0',
+                      'color': '#fff'}
 
 
 def generate_menu():
@@ -44,8 +54,7 @@ def generate_menu():
             ], id='div-radio-bracket'),
             
             html.Div([
-                html.H4('Filter by partner'),
-                
+                html.H4('Filter by partner', className='app__menu__title'),
                 html.Div([
                     dcc.Dropdown(id='partner1-selection',
                                  options=[], multi=False)
@@ -63,15 +72,22 @@ def generate_menu():
 
 
 def generate_main_content():
+    return html.Div([
+        html.Div([dcc.Tabs(id='main-tab', value='graph',
+                           parent_className='tabs-parent',
+                           children=[
+                               dcc.Tab(label='Graphical', value='graph',
+                                       className='menu-tab',
+                                       style=TAB_STYLE,
+                                       selected_style=SELECTED_TAB_STYLE),
 
-    return html.Div([dcc.Tabs(id='main-tab', value='graph',
-                     children=[
-                     dcc.Tab(label='Graphical', value='graph'),
-                     dcc.Tab(label='Compositions', value='comp')
-                 ]),
-                     html.Div(id='tab-content')],
-                    id='tab-main')
-
+                               dcc.Tab(label='Compositions', value='comp',
+                                       className='menu-tab',
+                                       style=TAB_STYLE,
+                                       selected_style=SELECTED_TAB_STYLE)
+                           ])], id='tab-container'),
+        html.Div(id='div-tab-content')],
+                    id='div-tab-main')
 
 
 def generate_left_column():
@@ -82,23 +98,28 @@ def generate_left_column():
                          value='N', multi=False, clearable=False,
                          searchable=False)],
                  className='dash-bootstrap'),
-        dcc.Graph(id='spec-graph')], id='div-main-left')
+        dcc.Graph(id='spec-graph', style={'width': '90%'})],
+                    id='div-main-left')
 
 
 def generate_central_column():
     return html.Div([
-        dcc.Graph(id='rating-graph')
+        dcc.Graph(id='rating-graph',
+                  style={'width': '90%'})
     ], id='div-main-center')
 
 
-def generate_right_column():
+def layout_comp_table():
     return html.Div([
         html.H2('Filter by class'),
+        dcc.Dropdown(options=[{'value': 'Rogue',
+                               'label': 'Rogue'}],
+                     id='class-selection-1',
+                     value='Rogue'),
+
         html.Div([
-            html.H4('Class 1', style=NO_MARGIN),
+            html.H4('Class 1'),
             html.Div([
-                dcc.Dropdown(options=[], id='class-selection-1',
-                             placeholder='Class'),
             ], className='div-class-selection dash-bootstrap'),
             html.Div([
                 dcc.Dropdown(options=[], id='spec-selection-1')
@@ -119,31 +140,40 @@ def generate_right_column():
         ], className='div-class-spec'),
         html.Div([
             dash_table.DataTable(id='comp-table',
-                                 columns=[{'name': col, 'id': col}
+                                 columns=[{'name': col, 'id': col,
+                                           'presentation': 'markdown'}
                                           for col in tableColumns],
                                  sort_action='native',
                                  style_table={'height': TABLE_HEIGHT,
                                               'overflowY': 'scroll'},
-                                 style_header={'height': 'auto'},
+                                 style_header={'height': 'auto',
+                                               'font-size': '22pt',
+                                               'font-family':
+                                               'Helvetica, Arial, sans-serif',
+                                               'backgroundColor': '#000',
+                                               'text-align': 'center'},
                                  style_cell={'height': 'auto',
                                              'whiteSpace': 'normal'},
                                  css=[dict(
                                      selector='.dash-spreadsheet td div',
                                      rule='''
-                                     max-width: 285px;
-                                     min-width: 60px;
+                                     min-width: 15vw;
                                      display: block;
-                                     '''
-                                 )],
+                                     font-size: 18pt;
+                                     text-align : center;
+                                     padding : 0;
+                                     '''),
+                                      dict(selector='tr:hover',
+                                           rule='background-color:#111')],
                                  style_data={'backgroundColor': BGCOLOR}),
             html.Br(),
             html.Br(),
             dash_table.DataTable(id='sum-comp-table',
                                  columns=[{'name': col, 'id': col}
                                           for col in tableColumns]
-                                 )
+            )
         ])
-    ], id='div-main-right')
+    ], id='div-main-left')
 
 
 def generate_upload_menu():
@@ -155,6 +185,7 @@ def generate_upload_menu():
 def generate_layout():
     return html.Div([
         html.Div(id='data-store', style={'display': 'none'}),
+        html.Div(id='player-name', style={'display': 'none'}),
         html.Div(id='hidden-comp-table', style={'display': 'none'}),
         html.Div(id='div-main-top', children=[
             html.H3('~ REFlexology ~', className='app__header__title'),

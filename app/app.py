@@ -54,13 +54,19 @@ def filter_data(data, partners):
         return data
 
 
-def make_spec_plot(data, col, player_name=None):
-    winMatrix = analysis.build_win_matrix(data, player_name=player_name)
+def make_spec_plot(data, col, player_name=None, group='spec'):
+
+    winMatrix = analysis.build_win_matrix(data, player_name=player_name,
+                                          group=group)
     winMatrix['Class'] = winMatrix.index
     winMatrix = winMatrix.sort_values(by=col, ascending=False)
 
-    cols = [analysis.classColors[' '.join(k.split(' ')[1:])]
-            for k in winMatrix.index]
+    if group == 'spec':
+        cols = [analysis.classColors[' '.join(k.split(' ')[1:])]
+                for k in winMatrix.index]
+    else:
+        cols = [analysis.classColors[k] for k in winMatrix.index]
+
     cols8bit = [tuple([k*255 for k in c]) for c in cols]
     plotlyCols = ['rgb(%i,%i,%i)'%col for col in cols8bit]
 
@@ -80,10 +86,8 @@ def make_spec_plot(data, col, player_name=None):
     return fig
 
 
-
 def make_rating_plot(data, names):
     teamMMR = analysis.get_team_mmr(data)
-    
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=list(range(0, len(teamMMR)+1)),
@@ -101,7 +105,6 @@ def make_rating_plot(data, names):
             name=name,
             line={'width': 3}
         ))
-
 
     fig.update_layout(xaxis_title='Games played',
                       yaxis_title='Rating',
@@ -123,22 +126,13 @@ def make_rating_plot(data, names):
 
 
 def make_comp_table(data):
-    def _get_spec_markdown(x):
-        x = x.strip()
-        spec = x.split(' ')[0].lower()
-        wowclass = ''.join(x.split(' ')[1:]).lower()
-        return '![classicon](/static/icons/%s_%s.png "%s")'%(wowclass, spec, x)
-
-    def _get_comp_markdown(comp):
-        return ' '.join([_get_spec_markdown(x) for x in comp.split(',')])
-
     opponentSpecs = analysis.get_opponent_specs(data)
 
     outcomes = analysis.get_outcome(data)
     ratingChange = analysis.get_player_field(data, 'Geebs', 'Rating change')
 
     compOutcome = pd.DataFrame([opponentSpecs
-                                .apply(lambda x:'('+', '.join(x)+')',
+                                .apply(lambda x:'('+', '.join(sorted(x))+')',
                                        axis=1),
                                 outcomes]).T
 
@@ -152,9 +146,7 @@ def make_comp_table(data):
 
     comps = pd.Series(fightCount.index).apply(lambda x:x.strip('(').strip(')')).values
 
-    compsHTML = np.array([_get_comp_markdown(x) for x in comps])
-
-    compTable = pd.DataFrame([compsHTML, winCount, lossCount,
+    compTable = pd.DataFrame([comps, winCount, lossCount,
                               winRate, avgRatingChange],
                              index=['Comp', 'Wins', 'Losses', 'Win rate (%)',
                                     'Avg rating change']).T
@@ -187,6 +179,7 @@ def get_player_match_count(data2v2, data3v3):
     )
 def reset_partner_on_bracket_change(_):
     return None, None
+
 
 @app.callback(
     [Output('partner1-selection', 'options'),
@@ -269,10 +262,12 @@ def update_hidden_comp_table(partner1, partner2, bracket, json_data,
      Input('partner1-selection', 'value'),
      Input('partner2-selection', 'value'),
      Input('bracket-selection', 'value'),
+     Input('radio-class-spec', 'value'),
      Input('data-store', 'children')],
     [State('player-name', 'children')])
-def update_plots(metric, partner1, partner2, bracket, json_data,
-                 player_name):
+def update_plots(metric, partner1, partner2, bracket, group_by,
+                 json_data, player_name, ):
+
     logging.info('Updating plots.')
     partners = [a for a in [partner1, partner2] if a is not None]
     allData = json.loads(json_data)
@@ -283,8 +278,24 @@ def update_plots(metric, partner1, partner2, bracket, json_data,
     logging.info('Filtering data')
     filteredData = filter_data(bracketData, partners)
 
-    return (make_spec_plot(filteredData, metric, player_name),
+    return (make_spec_plot(filteredData, metric, player_name, group_by),
             make_rating_plot(filteredData, [player]+partners))
+
+
+@app.callback(
+    Output('spec-selection-1','value'),
+    [Input('class-selection-1', 'value')]
+    )
+def reset_spec_1_value(_):
+    return None
+
+
+@app.callback(
+    Output('spec-selection-2','value'),
+    [Input('class-selection-2', 'value')]
+    )
+def reset_spec_2_value(_):
+    return None
 
 
 @app.callback(
@@ -295,26 +306,38 @@ def update_plots(metric, partner1, partner2, bracket, json_data,
      Input('class-selection-2', 'value'),
      Input('spec-selection-2', 'value')
     ])
-def filter_comp_table(comp_data, class1, spec1, class2, spec2):
-    
+def display_comp_table(comp_data, class1, spec1, class2, spec2):
     compTable = pd.DataFrame(json.loads(comp_data))
 
+    def _get_spec_markdown(x):
+        x = x.strip()
+        spec = x.split(' ')[0].lower()
+        wowclass = ''.join(x.split(' ')[1:]).lower()
+        return '![classicon](/static/icons/%s_%s.png "%s")'%(wowclass, spec, x)
+
+    def _get_comp_markdown(comp):
+        return ' '.join([_get_spec_markdown(x) for x in comp.split(',')])
+
     if class1 is not None:
-        filter1 = spec1 + class1 if spec1 is not None else class1
+        filter1 = spec1 + ' ' + class1 if spec1 is not None else class1
     else:
         filter1 = ''
 
     if class2 is not None:
-        filter2 = spec2 + class2 if spec2 is not None else class2
+        filter2 = spec2 + ' ' + class2 if spec2 is not None else class2
     else:
         filter2 = ''
 
     filterIndex = compTable['Comp'].str.contains(filter1) &\
                   compTable['Comp'].str.contains(filter2)
 
-    return compTable.loc[filterIndex, :].to_dict('records')
+    dispCompTable = compTable.loc[filterIndex, :]
 
-    
+    compsHTML = np.array([_get_comp_markdown(x) for x in dispCompTable.Comp])
+    dispCompTable.loc[:, 'Comp'] = compsHTML
+
+    return dispCompTable.to_dict('records')
+
 
 @app.callback(
     Output('sum-comp-table', 'data'),
@@ -323,6 +346,8 @@ def filter_comp_table(comp_data, class1, spec1, class2, spec2):
     )
 def update_sum_comp_table(compData, derivedData):
 
+
+    '''
     data = pd.DataFrame(compData if derivedData is None else derivedData)
 
     wins, losses = data['Wins'].sum(), data['Losses'].sum()
@@ -339,6 +364,9 @@ def update_sum_comp_table(compData, derivedData):
              'Win rate (%)': winRate,
              'Avg rating change': avgRatingChange}]
 
+    '''
+    return []
+
 
 @app.callback(
     Output('div-dropdown-partner2', 'style'),
@@ -354,53 +382,107 @@ def hide_show_partner2_selection(bracket):
         return {'display': 'inline-block'}
 
 
+def get_class_from_markdown_string(comp, get_spec=False):
+    specClass = comp.str.findall('"(.*?)"')\
+                   .explode()\
+                   .str.strip()
+
+    if get_spec:
+        return specClass.apply(lambda x: x.split(' ')[0])
+
+    return specClass.apply(lambda x: ' '.join(x.split(' ')[1:]))
+
+
+
 @app.callback(
     Output('class-selection-1', 'options'),
-    [Input('comp-table', 'data')]
+    [Input('hidden-comp-table', 'children')]
     )
 def update_class1_selection(data):
-    df = pd.DataFrame(data)
-    classes = df.Comp.str.findall('"(.*?)"')\
-                         .explode().str.strip()\
-                                       .apply(lambda x: x.split(' ')[-1])
-    
+    df = pd.DataFrame(json.loads(data))
+    specClasses = df.Comp.str.split(',').explode().str.strip()
+    classes = specClasses.apply(lambda x: ' '.join(x.split(' ')[1:]))
     classSelection = [{'label': c, 'value': c} for c in set(classes)]
+    
     return classSelection
 
 @app.callback(
-    [Output('spec-selection-1', 'options'),
-     Output('div-spec-selection-1', 'style'),
-     Output('class-selection-2', 'options'),
-     Output('div-class-selection-2', 'style')],
+    Output('spec-selection-1', 'options'),
     [Input('class-selection-1', 'value')],
-    [State('comp-table', 'data')])
+    [State('hidden-comp-table', 'children')]
+)
 def update_spec1_selection(class1, data):
 
     if class1 is None:
-        return [], {'display': 'none'}, [], {'display': 'none'}
+        return []
     
-    df = pd.DataFrame(data)
-    print(df.head(10))
-    classesSpecs = df.Comp.str.split(',').explode().str.strip()
-    classes = classesSpecs.apply(lambda x: ' '.join(x.split(' ')[1:]))
-    specs = classesSpecs.apply(lambda x:x.split(' ')[0])
+    df = pd.DataFrame(json.loads(data))
+    specClasses = df.Comp.str.split(',').explode().str.strip()
+    classes = specClasses.apply(lambda x: ' '.join(x.split(' ')[1:]))
+    specs = specClasses.apply(lambda x: x.split(' ')[0])
+    currentSpecs = specs[classes == class1]
+    specSelection = [{'label': c, 'value': c} for c in set(currentSpecs)]
 
-    specsForCurrentClass = specs[classes==class1]
+    return specSelection
 
-    def f(x):
-        z = [k for k in x if class1 not in k]
-        if len(z) > 0:
-            return z[0]
-        else:
-            return np.nan
-    
-    partnerClassesForCurrentClass = set(df.Comp.str.split(',').apply(f).dropna())
+@app.callback(
+    [Output('class-selection-2', 'options'),
+     Output('div-class-selection-2', 'style')],
+    [Input('class-selection-1', 'value'),
+     Input('spec-selection-1', 'value')],
+    [State('hidden-comp-table', 'children'),
+     State('class-selection-2', 'value')])
+def update_class2_selection(class1, spec1, data, class2):
+    if data is None:
+        return [], {}
 
-    return ([{'label': c, 'value': c} for c in set(specsForCurrentClass)],
-            {'display': 'inline-block'},
-            [{'label': c, 'value': c} for c in set(partnerClassesForCurrentClass)],
+    df = pd.DataFrame(json.loads(data))
+    specClasses = df.Comp.str.split(',').explode().str.strip()
+    classes = specClasses.apply(lambda x: ' '.join(x.split(' ')[1:]))
+    specs = specClasses.apply(lambda x: x.split(' ')[0])
+
+    if spec1 is None:
+        idx = (classes == class1)
+    else:
+        idx = (classes == class1) & (specs == spec1)
+
+    targetIndex = pd.unique(classes.index[idx])
+    boolTargetIndex = np.in1d(classes.index, targetIndex)
+    partnerIndices = ~idx & boolTargetIndex
+
+    currentClasses = classes[partnerIndices]
+
+    return ([{'label': c, 'value': c} for c in set(currentClasses)],
             {'display': 'inline-block'})
 
+@app.callback(
+    Output('spec-selection-2', 'options'),
+    [Input('class-selection-2', 'value')],
+    [State('class-selection-1', 'value'),
+     State('spec-selection-1', 'value'),
+     State('hidden-comp-table', 'children')])
+def update_spec2_selection(class2, class1, spec1, data):
+    if class2 is None or data is None:
+        return []
+
+    df = pd.DataFrame(json.loads(data))
+
+    specClasses = df.Comp.str.split(',').explode().str.strip()
+    classes = specClasses.apply(lambda x: ' '.join(x.split(' ')[1:]))
+    specs = specClasses.apply(lambda x: x.split(' ')[0])
+
+    if spec1 is None:
+        idx = (classes == class1)
+    else:
+        idx = (classes == class1) & (specs == spec1)
+
+    targetIndex = pd.unique(classes.index[idx])
+    boolTargetIndex = np.in1d(classes.index, targetIndex)
+    partnerIndices = ~idx & boolTargetIndex
+
+    currentSpecs = specs[partnerIndices & (classes == class2)]
+
+    return [{'label': c, 'value': c} for c in set(currentSpecs)]
 
 @app.callback(
     [Output('metric-rating-change', 'children'),

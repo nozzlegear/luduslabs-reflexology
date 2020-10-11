@@ -6,7 +6,7 @@ import dash_table
 FONT_COLOR = '#cccccc'
 BGCOLOR = 'rgba(0,0,0,0)'
 
-TABLE_HEIGHT = 450
+TABLE_HEIGHT = 400
 
 metricOptions = [
     {'label': 'Games played', 'value': 'N'},
@@ -37,7 +37,6 @@ def generate_menu():
                     html.P('', id='metric-rating-change',
                            className='app__metric__value')
                 ], className='div-metric-rating'),
-                
                 html.Div([
                     html.P('Games played', className='app__metric__title'),
                     html.Hr(className='kpi-divider'),
@@ -92,14 +91,25 @@ def generate_main_content():
 
 def generate_left_column():
     return html.Div([
-        html.Div(id='div-metric-selection', children=[
-            html.H3('Metric', style={'margin-bottom': '0px'}),
+
+        html.Div(id='div-metric-selection-1', children=[
+            html.H3('Metric', className='metric-title'),
             dcc.Dropdown(id='metric-selection', options=metricOptions,
                          value='N', multi=False, clearable=False,
-                         searchable=False)],
-                 className='dash-bootstrap'),
-        dcc.Graph(id='spec-graph', style={'width': '90%'})],
-                    id='div-main-left')
+                         searchable=False)
+        ], className='dash-bootstrap div-metric-selection'),
+        
+        html.Div(id='div-metric-selection-2', children=[
+            html.H3('Group by', className='metric-title'),
+            dcc.RadioItems(options=[{'value': 'class', 'label': 'Class'},
+                                    {'value': 'spec', 'label': 'Spec'}],
+                           value='class', id='radio-class-spec')],
+                 className='dash-bootstrap div-metric-selection'),
+        html.Div([
+            dcc.Graph(id='spec-graph', style={'width': '90%'})],
+            id='div-spec-graph')
+    ],id='div-main-left')
+
 
 
 def generate_central_column():
@@ -108,36 +118,29 @@ def generate_central_column():
                   style={'width': '90%'})
     ], id='div-main-center')
 
+def generate_comp_menu():
+    return html.Div([
+        html.Div([
+            dcc.Dropdown(options=[],
+                         id='class-selection-1',
+                         placeholder='Filter by class'),
+            dcc.Dropdown(options=[], id='spec-selection-1',
+                         placeholder='Filter by spec')
+            ], id='div-class-selection-1'),
+        html.Div([
+            dcc.Dropdown(options=[], id='class-selection-2',
+                         placeholder='Filter by class'),
+            dcc.Dropdown(options=[], id='spec-selection-2',
+                         placeholder='Filter by spec')
+            ], id='div-class-selection-2', style={'display': 'none'})
+    ], className='div-class-selection-outer dash-bootstrap')
+
 
 def layout_comp_table():
     return html.Div([
-        html.H2('Filter by class'),
-        dcc.Dropdown(options=[{'value': 'Rogue',
-                               'label': 'Rogue'}],
-                     id='class-selection-1',
-                     value='Rogue'),
-
         html.Div([
-            html.H4('Class 1'),
-            html.Div([
-            ], className='div-class-selection dash-bootstrap'),
-            html.Div([
-                dcc.Dropdown(options=[], id='spec-selection-1')
-            ], className='div-class-selection',
-                     style={'display': 'none'}, id='div-spec-selection-1')
-        ], className='div-class-spec'),
-        html.Div([            
-            html.Div([
-                html.H4('Class 2'),
-                dcc.Dropdown(options=[], id='class-selection-2')
-            ], className='div-class-selection',
-                     style={'display': 'none'}),
-            html.Div([
-                dcc.Dropdown(options=[], id='spec-selection-2')
-            ], className='div-class-selection',
-                     style={'display': 'none'},
-                     id='div-class-selection-2')
-        ], className='div-class-spec'),
+            generate_comp_menu()
+        ], id='div-comp-menu'),
         html.Div([
             dash_table.DataTable(id='comp-table',
                                  columns=[{'name': col, 'id': col,
@@ -147,7 +150,7 @@ def layout_comp_table():
                                  style_table={'height': TABLE_HEIGHT,
                                               'overflowY': 'scroll'},
                                  style_header={'height': 'auto',
-                                               'font-size': '22pt',
+                                               'font-size': '14pt',
                                                'font-family':
                                                'Helvetica, Arial, sans-serif',
                                                'backgroundColor': '#000',
@@ -159,7 +162,7 @@ def layout_comp_table():
                                      rule='''
                                      min-width: 15vw;
                                      display: block;
-                                     font-size: 18pt;
+                                     font-size: 12pt;
                                      text-align : center;
                                      padding : 0;
                                      '''),
@@ -171,9 +174,8 @@ def layout_comp_table():
             dash_table.DataTable(id='sum-comp-table',
                                  columns=[{'name': col, 'id': col}
                                           for col in tableColumns]
-            )
-        ])
-    ], id='div-main-left')
+                )
+        ], id='div-comp-content')], id='div-main-right')
 
 
 def generate_upload_menu():

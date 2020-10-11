@@ -18,9 +18,15 @@ classColors = {
 }
 
 
-def build_win_matrix(data, alpha=0.1, player_name=None):
+def build_win_matrix(data, alpha=0.1, player_name=None, group='specs'):
 
     opponentSpecs = get_opponent_specs(data)
+
+    def _get_class(x):
+        return ' '.join(x.split(' ')[1:])
+    if group == 'class':
+        opponentSpecs = opponentSpecs.apply(lambda x: x.apply(_get_class))
+        
     opponentSpecs.columns = ['Player%i'%k for k in opponentSpecs.columns]
     allSpecs = pd.Series(index=list(set(opponentSpecs.values.ravel())))
     
@@ -107,7 +113,6 @@ def get_player_teams(data):
         return ', '.join(sorted(x.loc[nameCols].values))
     
     return data.apply(_get_player_teams, axis=1)
-
 
 def get_opponent_specs(data):
     is3v3 = np.any(pd.Series(data.columns).str.match('T0P2'))

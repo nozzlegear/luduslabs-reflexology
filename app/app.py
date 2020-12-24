@@ -95,7 +95,7 @@ def make_rating_plot(data, names):
         name='Team MMR',
         line={'width': 2, 'color': 'rgba(200,200,200,0.5)'}
     ))
-    
+
     for name in names:
         playerRating = analysis.get_player_rating(data, name)
 
@@ -503,13 +503,15 @@ def update_kpis(bracket, json_data, partner1, partner2):
     filteredData = filter_data(bracketData, partners)
     player, _ = analysis.get_player_and_team_mates(filteredData)
     
-    rating = analysis.get_player_rating(filteredData, player)
+    print(player)
+    print(analysis.get_player_field(filteredData, player, 'Rating change'))
+    ratingChange = analysis.get_player_field(filteredData, player, 'Rating change').sum()
+    print(ratingChange)
 
-    ratingChange = (rating.iloc[-1] - rating.iloc[0])
     symbol = '+' if ratingChange >+ 0 else ''
 
     ratingChangeString = '%s%i'%(symbol, ratingChange)
-    gamesPlayed = '%i'%len(rating)
+    gamesPlayed = '%i'%filteredData.shape[0]
 
     ratingChangeStyle = {'color' : green if ratingChange >= 0 else red}
 
@@ -529,4 +531,5 @@ def display_tab(tab):
 
     
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    #app.run_server(host='0.0.0.0', port=5050)
+    app.run_server(port=8050)

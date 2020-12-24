@@ -85,8 +85,17 @@ def get_player_rating(data, name):
         col = [c for c in nameCols if x.loc[c] == name][0]
         ratingCol = col.replace('_Name','_Rating')
         return x.loc[ratingCol] + x.loc[ratingCol+' change']
-    
-    return data.apply(lambda x:_get_player_rating(x, name), axis=1)
+
+
+    # This first bit gets the end-of-fight rating
+    postfightRating = data.apply(lambda x:_get_player_rating(x, name), axis=1).values
+
+    # we prepend the first pre-fight rating (which corresponds to 0 games played)
+    prefightRating = np.array([get_player_field(data[:2], name,
+                                                'Rating').values[0]])
+
+    playerRating = np.concatenate([prefightRating, postfightRating])
+    return playerRating
 
 
 def get_player_and_team_mates(data):
@@ -140,9 +149,13 @@ def get_outcome(data):
                      index=data.index)
 
 
-def get_team_mmr(data):
+def get_team_mmr(data, opponent=False):
     def _get_team_mmr(x):
-        mmrCol = 'T%i_MMR'%x.PlayerSide
+        if opponent:
+            mmrCol = 'T%i_MMR'%(1-x.PlayerSide)
+        else:
+            mmrCol = 'T%i_MMR'%x.PlayerSide
+
         return x.loc[mmrCol]
 
     return data.apply(_get_team_mmr, axis=1)

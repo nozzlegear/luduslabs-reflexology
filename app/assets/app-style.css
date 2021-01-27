@@ -1,9 +1,8 @@
 
 body {
-
     font-family : Helvetica, Arial, sans-serif;
     color: #ccc;
-    background-color: #fff;
+    background-color: #151515;
 
 }
 
@@ -17,30 +16,37 @@ body {
 
 }
 
+
 #div-mother {
     width : 100%;
 }
 
-#div-main-left {
-    width : 50%;
-    float : left;
-    background-color: #222;
-    flex: 1;
-    padding-bottom : 2%;
+#div-metric-menu {
+    width: 100%;
+    float: left;
+}
 
+#div-graphs {
+    width: 100%;
+    float: left;
+}
+
+#div-spec-graph {
+    width: 50%;
+    float: left;
+}
+
+#div-rating-graph {
+    width: 50%;
+    float: left;
 }
 
 #div-main-center {
-    padding-top : 7%;
-    width : 50%;
-    float : left;
-    background-color: #222;
-    flex: 1;
+    background-color: #151515;
 }
 
 #div-main-right {
-    width : 100%;
-    background-color: #222;
+    background-color: #151515;
 }
 
 #div-main-top {
@@ -48,7 +54,7 @@ body {
     margin-left: 5%;
     margin-right: 5%;
     width: 90%;
-    background-color: #222;
+    background-color: #151515;
     padding-bottom : 0.5%;
     padding-top : 0.25%;
     margin-bottom : 1%;
@@ -63,9 +69,11 @@ body {
     margin-right: 5%;
     padding-bottom:  1%;
     margin-bottom : 2%;
-    background-color: #222;
+    background-color: #151515;
 
 }
+
+
 
 #div-bottom {
     display: none;
@@ -76,7 +84,7 @@ body {
 .div-metric-rating {
     /* Leave width and margins unchanged as this goes
        inside the div-metric-kpi-container */
-    background-color : #222;
+    background-color : #151515;
     width : 40%;
     text-align : center;
     margin-left : 5%;
@@ -129,8 +137,28 @@ body {
     margin-left : 5%;
     text-align : center;
     margin-right: 5%;
-    
+}
 
+
+/* TABS */
+#tab-container {
+   background-color: #151515; 
+}
+
+#main-tab {
+   background-color: #151515;
+}    
+
+.tabs-parent {
+    background-color: #f00;
+}
+
+#div-tab-main {
+   background-color: #151515;
+}
+
+#main-tab-parent {
+    background-color: #151515;
 }
 
 #div-dropdown-partner {
@@ -166,21 +194,17 @@ body {
     padding-left: 5%;
 }
 
-#div-spec-graph {
-    width : 100%;
-    float : left;
-}
-
-
 
 #div-class-selection-1 {
     width : 25%;
     float : left;
+    padding-left: 1em;
 }
 
 #div-class-selection-2 {
     width : 25%;
     float : left;
+    padding-left: 1em;
 }
 
 
@@ -192,12 +216,12 @@ body {
 #div-comp-menu {
     width : 100%;
     height : 15%;
-    background-color : #222;
+    background-color : #151515;
     border-bottom : 2px solid #ccc;
 }
 
 .app__datatable {
-    background-color : #222;
+    background-color : #151515;
 }
 
 .Select .Select-value {
@@ -215,3 +239,8 @@ img[alt=classicon] {
     margin-bottom : 0;
 }
 
+#div-main-greet {
+    width: 90%;
+    margin-left: 5%;
+    margin-right: 5%;
+}

@@ -6,6 +6,9 @@ import os
 import sys
 import logging
 
+import base64
+import io
+
 import re
 
 from dash.dependencies import Input, Output, State
@@ -16,8 +19,8 @@ import numpy as np
 import json
 
 from layout import (generate_layout, BGCOLOR, FONT_COLOR,
-                    generate_left_column, generate_central_column,
-                    layout_comp_table)
+                    generate_spec_graph, generate_rating_graph,
+                    generate_metric_menu, layout_comp_table)
 
 baseDir = os.path.dirname(os.path.abspath(__file__)) + '/../'
 sys.path.append(baseDir)
@@ -59,7 +62,7 @@ def make_spec_plot(data, col, player_name=None, group='spec'):
     winMatrix = analysis.build_win_matrix(data, player_name=player_name,
                                           group=group)
     winMatrix['Class'] = winMatrix.index
-    winMatrix = winMatrix.sort_values(by=col, ascending=False)
+    winMatrix = winMatrix.sort_values(by=col, ascending=True)
 
     if group == 'spec':
         cols = [analysis.classColors[' '.join(k.split(' ')[1:])]
@@ -70,19 +73,26 @@ def make_spec_plot(data, col, player_name=None, group='spec'):
     cols8bit = [tuple([k*255 for k in c]) for c in cols]
     plotlyCols = ['rgb(%i,%i,%i)'%col for col in cols8bit]
 
+    xlabel = {'win rate': 'Win rate (%)',
+              'avg rating change': 'Average rating change',
+              'N': 'Number of games played'}[col]
 
-    fig = go.Figure(data=[go.Bar(
-        x=winMatrix['Class'],
-        y=winMatrix[col],
+
+    fig = go.Figure(
+        data=[go.Bar(
+        x=winMatrix[col],
+        y=[k+'  ' for k in winMatrix['Class']],
+        orientation='h',
         marker_color=plotlyCols
-    )], layout={'margin': {'t': 0},
+    )], layout={'margin': {'t': 0, 'r': 0},
                 'paper_bgcolor': BGCOLOR,
                 'plot_bgcolor': BGCOLOR,
-                'font': {'color': FONT_COLOR}})
+                'font': {'color': FONT_COLOR, 'size': 14},
+                'xaxis_title': xlabel})
 
-    fig.update_xaxes(showgrid=False)
-    fig.update_yaxes(gridcolor='rgba(255,255,255,0.2)')
-
+    fig.update_yaxes(showgrid=False)
+    fig.update_xaxes(gridcolor='rgba(255,255,255,0.2)')
+    
     return fig
 
 
@@ -113,7 +123,7 @@ def make_rating_plot(data, names):
                                   orientation='h',
                                   xanchor='left',
                                   x=0.1),
-                      margin={'t': 0},
+                      margin={'t': 0, 'r': 0},
                       paper_bgcolor=BGCOLOR,
                       plot_bgcolor=BGCOLOR,
                       font={'color': FONT_COLOR}
@@ -206,14 +216,25 @@ def update_partner_selection(json_data, bracket, partner1, partner2):
 @app.callback(
     [Output('data-store', 'children'),
      Output('player-name', 'children')],
-    [Input('upload', 'n_clicks')]
+    [Input('upload', 'contents')]
     )
-def load_data(_):
+def load_data(content):
     logging.info('Loading data.')
     # So after upload:
     # 1) update the data-store div with hidden JSON data
     # 2) update the partner selection option
 
+    if content is not None:
+        contentType, contentString = content.split(',')
+        
+        if contentType != 'data:text/x-lua;base64':
+            raise NotImplementedError('Data type is not lua')
+
+        decoded = base64.b64decode(contentString)
+        inputData = io.StringIO(decoded.decode('utf-8'))
+    else:
+        inputData = dataFile
+                
     data2v2, data3v3 = rio.parse_lua_file(dataFile)
 
     matchCount = get_player_match_count(data2v2, data3v3)
@@ -266,7 +287,7 @@ def update_hidden_comp_table(partner1, partner2, bracket, json_data,
      Input('data-store', 'children')],
     [State('player-name', 'children')])
 def update_plots(metric, partner1, partner2, bracket, group_by,
-                 json_data, player_name, ):
+                 json_data, player_name):
 
     logging.info('Updating plots.')
     partners = [a for a in [partner1, partner2] if a is not None]
@@ -320,6 +341,7 @@ def display_comp_table(comp_data, class1, spec1, class2, spec2):
 
     if class1 is not None:
         filter1 = spec1 + ' ' + class1 if spec1 is not None else class1
+        print(filter1)
     else:
         filter1 = ''
 
@@ -328,8 +350,9 @@ def display_comp_table(comp_data, class1, spec1, class2, spec2):
     else:
         filter2 = ''
 
-    filterIndex = compTable['Comp'].str.contains(filter1) &\
-                  compTable['Comp'].str.contains(filter2)
+    compProcessed = compTable['Comp'].str.replace('Demon ','Demon')
+    filterIndex = compProcessed.str.contains(filter1) &\
+                  compProcessed.str.contains(filter2)
 
     dispCompTable = compTable.loc[filterIndex, :]
 
@@ -524,12 +547,29 @@ def update_kpis(bracket, json_data, partner1, partner2):
     )
 def display_tab(tab):
     if tab == 'graph':
-        return [generate_left_column(), generate_central_column()]
+        return [generate_metric_menu(),
+                html.Div(id='div-graphs',children=[
+                    generate_spec_graph(),
+                    generate_rating_graph()])
+                ]
     
     elif tab == 'comp':
         return [layout_comp_table()]
 
+
+@app.callback(
+    [Output('div-main-content', 'style'),
+     Output('div-main-greet', 'style')],
+    [Input('button-demo', 'n_clicks'),
+     Input('upload', 'filename')]
+    )
+def show_main_content(n_clicks, filename):
+    if (n_clicks is not None) or (filename is not None):
+        return [{'display': 'block'}, {'display': 'none'}]
+
+    return [{'display': 'none'}, {'display': 'block'}]
+
     
 if __name__ == "__main__":
     #app.run_server(host='0.0.0.0', port=5050)
-    app.run_server(port=8050)
+    app.run_server(host='0.0.0.0', port=8050, debug=True)

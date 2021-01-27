@@ -18,11 +18,11 @@ tableColumns = ['Comp', 'Wins', 'Losses', 'Win rate (%)', 'Avg rating change']
 NO_MARGIN = {'margin': '0px'}
 
 
-TAB_STYLE = {'backgroundColor': '#111',
+TAB_STYLE = {'backgroundColor': '#222',
              'borderBottom': '0',
              'color': '#fff'}
 
-SELECTED_TAB_STYLE = {'backgroundColor': '#222',
+SELECTED_TAB_STYLE = {'backgroundColor': '#111',
                       'borderBottom': '0',
                       'color': '#fff'}
 
@@ -89,38 +89,43 @@ def generate_main_content():
                     id='div-tab-main')
 
 
-def generate_left_column():
+def generate_spec_graph():
     return html.Div([
+        dcc.Graph(id='spec-graph', style={'width': '100%'},
+                  config={'displayModeBar': False})],
+                    id='div-spec-graph')
 
-        html.Div(id='div-metric-selection-1', children=[
-            html.H3('Metric', className='metric-title'),
-            dcc.Dropdown(id='metric-selection', options=metricOptions,
-                         value='N', multi=False, clearable=False,
-                         searchable=False)
-        ], className='dash-bootstrap div-metric-selection'),
+
+def generate_metric_menu():
+    return html.Div([
+        html.Div(id='div-metric-selection-1',
+                 children=[
+                     html.H3('Metric', className='metric-title'),
+                     dcc.Dropdown(id='metric-selection', options=metricOptions,
+                                  value='N', multi=False, clearable=False,
+                                  searchable=False)
+                 ], className='dash-bootstrap div-metric-selection'),
         
         html.Div(id='div-metric-selection-2', children=[
             html.H3('Group by', className='metric-title'),
             dcc.RadioItems(options=[{'value': 'class', 'label': 'Class'},
                                     {'value': 'spec', 'label': 'Spec'}],
                            value='class', id='radio-class-spec')],
-                 className='dash-bootstrap div-metric-selection'),
-        html.Div([
-            dcc.Graph(id='spec-graph', style={'width': '90%'})],
-            id='div-spec-graph')
-    ],id='div-main-left')
+                 className='dash-bootstrap div-metric-selection')],
+                    id='div-metric-menu')
 
 
-
-def generate_central_column():
+def generate_rating_graph():
     return html.Div([
         dcc.Graph(id='rating-graph',
-                  style={'width': '90%'})
-    ], id='div-main-center')
+                  style={'width': '90%'},
+                  config={'displayModeBar': False})
+    ], id='div-rating-graph')
 
 def generate_comp_menu():
     return html.Div([
         html.Div([
+            html.H3('Opponent 1'),
             dcc.Dropdown(options=[],
                          id='class-selection-1',
                          placeholder='Filter by class'),
@@ -128,6 +133,7 @@ def generate_comp_menu():
                          placeholder='Filter by spec')
             ], id='div-class-selection-1'),
         html.Div([
+            html.H3('Opponent 2'),            
             dcc.Dropdown(options=[], id='class-selection-2',
                          placeholder='Filter by class'),
             dcc.Dropdown(options=[], id='spec-selection-2',
@@ -177,25 +183,65 @@ def layout_comp_table():
                 )
         ], id='div-comp-content')], id='div-main-right')
 
+greetStrings = ['Welcome to REFlexology.',
+'''
+You can upload your own REFlex data and use the
+dashboard according to the Terms & Conditions. The file you are after
+is called REFlex.lua and is located in your WoW folder:
+World of Warcraft\...\
+ ,
+''','''
+If you just want to take REFlexology for a  spin, click "Demo" below. 
+If you want to go back and explore your own arena data, just refresh
+the page and you'll be right back here.''']
+
+def generate_greeting_page():
+    return html.Div([
+        html.P(string, className="greet-string") for string in greetStrings
+        ])
 
 def generate_upload_menu():
-    return html.Div([
-        html.Button('Upload', id='upload'),
-    ], id='div-bottom')
+      return dcc.Upload(
+        id='upload',
+        children=html.Div([
+            'Drag and Drop or ',
+            html.A('Select Files')
+        ]),
+        style={
+            'width': '100%',
+            'height': '60px',
+            'lineHeight': '60px',
+            'borderWidth': '1px',
+            'borderStyle': 'dashed',
+            'borderRadius': '5px',
+            'textAlign': 'center',
+            'margin': '10px'
+        },
+          multiple=False,
+          max_size=5*10**7 # 50mb max size
+    )
 
 
 def generate_layout():
     return html.Div([
-        html.Div(id='data-store', style={'display': 'none'}),
-        html.Div(id='player-name', style={'display': 'none'}),
-        html.Div(id='hidden-comp-table', style={'display': 'none'}),
-        html.Div(id='div-main-top', children=[
-            html.H3('~ REFlexology ~', className='app__header__title'),
-            html.H4('by Geebs', className='app__header__subtitle')
-        ]),
-        generate_menu(),
         html.Div([
-            generate_main_content()
-        ], id='div-main-mother'),
-        generate_upload_menu()
+            html.Div(id='data-store', style={'display': 'none'}),
+            html.Div(id='player-name', style={'display': 'none'}),
+            html.Div(id='hidden-comp-table', style={'display': 'none'}),
+            html.Div(id='div-main-top', children=[
+                html.H3('~ REFlexology ~', className='app__header__title'),
+                html.H4('by Geebs', className='app__header__subtitle')
+            ]),
+            generate_menu(),
+            html.Div([
+                generate_main_content()
+            ], id='div-main-mother')
+        ], id='div-main-content', style={'display' : 'none'}),
+
+        html.Div(children=[
+            generate_greeting_page(),
+            generate_upload_menu(),
+            html.Button(id='button-demo', children='Demo')
+        ], style={'display' : 'block'},
+                 id='div-main-greet')
     ], id='div-mother')

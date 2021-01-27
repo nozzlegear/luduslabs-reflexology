@@ -57,7 +57,7 @@ def build_win_matrix(data, alpha=0.1, player_name=None, group='specs'):
 
     lossCount = fightCount - winCount
 
-    winRate = G['Win'].mean()
+    winRate = G['Win'].mean()*100
     d = beta(winCount.values+1, lossCount.values+1)
     winLower = pd.Series(d.ppf(alpha/2), index=winCount.index)
     winUpper = pd.Series(d.ppf(1-alpha/2), index=winCount.index)

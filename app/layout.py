@@ -124,7 +124,12 @@ def generate_metric_menu():
             dcc.RadioItems(options=[{'value': 'class', 'label': 'Class'},
                                     {'value': 'spec', 'label': 'Spec'}],
                            value='class', id='radio-class-spec')],
-                 className='dash-bootstrap div-metric-selection')],
+                 className='dash-bootstrap div-metric-selection'),
+        html.P(children=["Tip: Select a time range you're interested in. ",
+                         html.Br(),
+                         "Double click on the plot to reset the filter."],
+               id='tip-time-range')
+    ], 
                     id='div-metric-menu')
 
 
@@ -155,7 +160,8 @@ def generate_comp_menu():
                          placeholder='Filter by class'),
             dcc.Dropdown(options=[], id='spec-selection-2',
                          placeholder='Filter by spec')
-            ], id='div-class-selection-2', style={'display': 'none'})
+            ], id='div-class-selection-2', style={'display': 'none'}),
+
     ], className='div-class-selection-outer dash-bootstrap')
 
 
@@ -173,7 +179,7 @@ def layout_comp_table():
                                  style_table={'height': TABLE_HEIGHT,
                                               'overflowY': 'scroll'},
                                  style_header={'height': 'auto',
-                                               'font-size': '18pt',
+                                               'font-size': '15pt',
                                                'font-family':
                                                'Helvetica, Arial, sans-serif',
                                                'backgroundColor': '#000',

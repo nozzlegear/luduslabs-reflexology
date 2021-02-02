@@ -217,7 +217,6 @@ a {
 
 .div-class-selection-outer {
 
-
 }
 
 #div-comp-menu {
@@ -277,4 +276,8 @@ img[alt=classicon] {
 
 #upload-div {
     width: 100%;
+}
+
+#tip-time-range {
+    margin-top: 1em;
 }

@@ -67,6 +67,17 @@ app.config['suppress_callback_exceptions'] = True
 
 server = app.server
 
+
+def filter_low_rating(data, name, theta=150, N=50):
+    rating = analysis.get_player_rating(data, name)[1:]
+    meanRating = np.mean(rating)
+    idx = np.arange(len(rating))
+
+    highIndex = (idx > 50) | (rating > (rating[N]-theta))
+    # first
+    firstIndex = data.index[np.where(highIndex)[0][0]:]
+    return data.loc[firstIndex, :]
+
 def get_spec(x):
     if 'Beast Mastery' in x:
         return 'Beast Mastery'
@@ -137,7 +148,7 @@ def make_spec_plot(data, col, player_name=None, group='spec'):
     return fig
 
 @timeit
-def make_rating_plot(data, name='', partner1=None, partner2=None):
+def make_rating_plot(data, name='', partner1=None, partner2=None, keepIndex=None):
 
     SELF_COL = 'rgba(210, 40, 40, 0.9)'    
     partnerCol = 'rgb(210, 210, 210)'
@@ -147,19 +158,20 @@ def make_rating_plot(data, name='', partner1=None, partner2=None):
 
     # MMR trace
     teamMMR = analysis.get_team_mmr(data)
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=gamesPlayed,
-        y=teamMMR,
-        name='Team MMR',
-        line={'width': 1, 'color': 'rgba(200,200,200,0.35)'}
-
-    ))
 
     # Main rating trace
     playerRating = pd.Series(analysis.get_player_rating(data, name),
                              index=index)
     
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=gamesPlayed,
+        y=teamMMR,
+        name='Team MMR',
+        line={'width': 1, 'color': 'rgba(150,150,255,0.5)'}
+
+    ))
+
     fig.add_trace(go.Scatter(
         x=gamesPlayed,
         y=playerRating,
@@ -187,7 +199,33 @@ def make_rating_plot(data, name='', partner1=None, partner2=None):
             ))
             first = False
 
-            
+    if keepIndex is not None:
+        x = gamesPlayed.iloc[1:][~keepIndex]
+        y = playerRating.iloc[1:][~keepIndex]
+        xd = np.diff(x)
+        if any(xd > 1):
+            d0 = np.where(xd>1)[0][0]
+            print(d0)
+            x1 = x.iloc[:(d0+1)]
+            y1 = y.iloc[:(d0+1)]
+            x2 = x.iloc[(d0+1):]
+            y2 = y.iloc[(d0+1):]
+            xs = [x1, x2]
+            ys = [y1, y2]
+        else:
+            xs = [x]
+            ys = [y]
+
+        for x, y in zip(xs, ys):
+            fig.add_trace(go.Scatter(
+                x=x,
+                y=y,
+                showlegend=False,
+                line={'width': 3, 'color': 'rgba(80,80,80,1.0)'}
+
+    ))
+
+        
     fig.update_layout(xaxis_title='Games played',
                       yaxis_title='Rating',
                       legend=dict(yanchor='top',
@@ -198,6 +236,7 @@ def make_rating_plot(data, name='', partner1=None, partner2=None):
                       margin={'t': 0, 'r': 0},
                       paper_bgcolor=BGCOLOR,
                       plot_bgcolor=BGCOLOR,
+                      dragmode='select',
                       font={'color': FONT_COLOR, 'size': FONT_SIZE1}
     )
 
@@ -274,11 +313,13 @@ def reset_partner_on_bracket_change(_):
     [Input('player-name', 'children'),
      Input('bracket-selection', 'value'),
      Input('partner1-selection', 'value'),
-     Input('partner2-selection', 'value')],
+     Input('partner2-selection', 'value'),
+     Input('rating-graph', 'selectedData')],
     [State('data-store', 'children')]
     )
 @timeit
-def update_partner_selection(player, bracket, partner1, partner2, json_data):
+def update_partner_selection(player, bracket, partner1, partner2, selected, json_data):
+
     tic = time()
     logging.info('UPDATE PARTNER SELECTION')
     if json_data is None:
@@ -286,6 +327,17 @@ def update_partner_selection(player, bracket, partner1, partner2, json_data):
     logging.info('Updating partner selection')
     allData = json.loads(json_data)
     bracketData = pd.DataFrame(allData[bracket])
+
+    if selected is not None:
+        idx = np.arange(bracketData.shape[0])
+        keepIndex = (idx >= selected['range']['x'][0]) &\
+                    (idx <= selected['range']['x'][1])
+
+        bracketData = bracketData.loc[keepIndex, :]
+    else:
+        keepIndex = None
+
+    
     if bracketData.shape[0] == 0:
         raise PreventUpdate
     allTeamMates = timeit(analysis.get_team_mates)(bracketData).values.ravel()
@@ -366,6 +418,9 @@ def load_data(content, n_clicks):
         # Should implement some verification step here if we can't
         # determine the player
         playerName = matchCount[matchCount==matchCount.max()].sample(1).index[0]
+
+    #data2v2 = filter_low_rating(data2v2, playerName)
+    #data3v3 = filter_low_rating(data3v3, playerName)
                                 
     jsonData = '{"2v2":%s, "3v3":%s}'%(data2v2.to_json(),
                                        data3v3.to_json())
@@ -381,13 +436,16 @@ def load_data(content, n_clicks):
     [Input('partner1-selection', 'value'),
      Input('partner2-selection', 'value'),
      Input('bracket-selection', 'value'),
-     Input('player-name', 'children')],
+     Input('player-name', 'children'),
+     Input('rating-graph', 'selectedData')],
     [State('data-store', 'children')]
     )
 @timeit
 def update_hidden_comp_table(partner1, partner2, bracket, 
-                             player_name, json_data):
+                             player_name, selected, json_data):
     logging.info('UPDATING HIDDEN COMP TABLE')
+
+    
 
     if json_data is None:
         raise PreventUpdate
@@ -395,6 +453,13 @@ def update_hidden_comp_table(partner1, partner2, bracket,
     partners = [a for a in [partner1, partner2] if a is not None]
     allData = json.loads(json_data)
     bracketData = pd.DataFrame(allData[bracket])
+
+    if selected is not None:
+        idx = np.arange(bracketData.shape[0])
+        keepIndex = (idx >= selected['range']['x'][0]) &\
+                    (idx <= selected['range']['x'][1])
+
+        bracketData = bracketData.loc[keepIndex, :]
 
     if bracketData.shape[0] == 0:
         raise PreventUpdate
@@ -417,11 +482,12 @@ def update_hidden_comp_table(partner1, partner2, bracket,
      Input('partner2-selection', 'value'),
      Input('bracket-selection', 'value'),
      Input('radio-class-spec', 'value'),
-     Input('player-name', 'children')],
+     Input('player-name', 'children'),
+     Input('rating-graph', 'selectedData')],
     [State('data-store', 'children')])
 @timeit
 def update_plots(metric, partner1, partner2, bracket, group_by,
-                 player, json_data):
+                 player, selected, json_data):
 
     logging.info('UPDATE PLOTS')
     if json_data is None:
@@ -432,15 +498,27 @@ def update_plots(metric, partner1, partner2, bracket, group_by,
     allData = json.loads(json_data)
     bracketData = pd.DataFrame(allData[bracket])
 
+    if selected is not None:
+        idx = np.arange(bracketData.shape[0])
+        keepIndex = (idx >= selected['range']['x'][0]) &\
+                    (idx <= selected['range']['x'][1])
+
+        keptBracketData = bracketData.loc[keepIndex, :]
+
+    else:
+        keptBracketData = bracketData
+        keepIndex = None
+
+
     if bracketData.shape[0] == 0:
         raise PreventUpdate
 
     logging.info('Filtering data')
-    filteredData = filter_data(bracketData, partners)
+    filteredData = filter_data(keptBracketData, partners)
 
     return (make_spec_plot(filteredData, metric, player, group_by),
             {'display': 'block'},
-            make_rating_plot(bracketData, player, partner1, partner2),
+            make_rating_plot(bracketData, player, partner1, partner2, keepIndex),
             {'display': 'block'})
 
 
@@ -673,11 +751,12 @@ def update_spec2_selection(class2, class1, spec1, data):
     [Input('bracket-selection', 'value'),
      Input('player-name', 'children'),
      Input('partner1-selection', 'value'),
-     Input('partner2-selection', 'value')],
+     Input('partner2-selection', 'value'),
+     Input('rating-graph', 'selectedData')],
     [State('data-store', 'children')]
     )
 @timeit
-def update_kpis(bracket, player, partner1, partner2, json_data):
+def update_kpis(bracket, player, partner1, partner2, selected, json_data):
     logging.info('UPDATE KPIs')
     if json_data is None:
         raise PreventUpdate
@@ -686,6 +765,14 @@ def update_kpis(bracket, player, partner1, partner2, json_data):
     allData = json.loads(json_data)
     partners = [p for p in [partner1, partner2] if p is not None]
     bracketData = pd.DataFrame(allData[bracket])
+    
+    if selected is not None:
+        idx = np.arange(bracketData.shape[0])
+        keepIndex = (idx >= selected['range']['x'][0]) &\
+                    (idx <= selected['range']['x'][1])
+
+        bracketData = bracketData.loc[keepIndex, :]
+    
     filteredData = filter_data(bracketData, partners)
     if filteredData.shape[0] == 0:
         raise PreventUpdate

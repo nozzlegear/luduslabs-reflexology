@@ -6,6 +6,10 @@ body {
 
 }
 
+a {
+    color: #fff;
+}
+
 .app__header__title {
     margin: 0;
 }
@@ -37,23 +41,24 @@ body {
 }
 
 #div-rating-graph {
-    width: 50%;
+    width: 48%;
+    margin-right: 2%;
     float: left;
 }
 
 #div-main-center {
-    background-color: #151515;
+    background-color: #333;
 }
 
 #div-main-right {
-    background-color: #151515;
+    background-color: #333;
 }
 
 #div-main-top {
     text-align : center;
-    margin-left: 5%;
-    margin-right: 5%;
-    width: 90%;
+    margin-left: 2.5%;
+    margin-right: 2.5%;
+    width: 95%;
     background-color: #151515;
     padding-bottom : 0.5%;
     padding-top : 0.25%;
@@ -63,10 +68,10 @@ body {
 }
 
 #div-main-menu {
-    width : 90%;
+    width : 96%;
     float : left;
-    margin-left: 5%;
-    margin-right: 5%;
+    margin-left: 2%;
+    margin-right: 2%;
     padding-bottom:  1%;
     margin-bottom : 2%;
     background-color: #151515;
@@ -85,10 +90,10 @@ body {
     /* Leave width and margins unchanged as this goes
        inside the div-metric-kpi-container */
     background-color : #151515;
-    width : 40%;
+    width : 30%;
     text-align : center;
-    margin-left : 5%;
-    margin-right : 5%;
+    margin-left : 1.6665%;
+    margin-right : 1.6665%;
     float : left;
     margin-top : 1%;
     margin-bottom : 1%;
@@ -120,7 +125,7 @@ body {
 }
 
 #div-metric-kpi-container {
-    width : 30%;
+    width : 40%;
 }
 
 
@@ -131,12 +136,10 @@ body {
 }
 
 #div-radio-bracket {
-
-    width : 25%;
+    font-size: 16pt;
+    width : 20%;
     float : left;
-    margin-left : 5%;
     text-align : center;
-    margin-right: 5%;
 }
 
 
@@ -154,11 +157,15 @@ body {
 }
 
 #div-tab-main {
-   background-color: #151515;
+    background-color: #151515;
 }
 
 #main-tab-parent {
     background-color: #151515;
+}
+
+#div-tab-content {
+    background-color: #111;
 }
 
 #div-dropdown-partner {
@@ -185,7 +192,7 @@ body {
 
 .div-metric-selection {
     margin-left: 5%;
-    width : 40%;
+    width : 25%;
     margin-bottom : 10px;
     float: left;
 }
@@ -197,27 +204,27 @@ body {
 
 #div-class-selection-1 {
     width : 25%;
-    float : left;
+    display: inline-block;
     padding-left: 1em;
 }
 
 #div-class-selection-2 {
     width : 25%;
-    float : left;
+    display: inline-block;
     padding-left: 1em;
 }
 
 
 .div-class-selection-outer {
-    width : 100%;
-    margin-top : 1.5%;
+
+
 }
 
 #div-comp-menu {
     width : 100%;
     height : 15%;
     background-color : #151515;
-    border-bottom : 2px solid #ccc;
+    padding-bottom: 1em;
 }
 
 .app__datatable {
@@ -225,8 +232,11 @@ body {
 }
 
 .Select .Select-value {
-  background-color: #111;
   color: #fff;
+}
+
+.Select-value-label {
+    color: #aaa;
 }
 
 img[alt=classicon] {
@@ -243,4 +253,28 @@ img[alt=classicon] {
     width: 90%;
     margin-left: 5%;
     margin-right: 5%;
+}
+
+.greet-string {
+    font-size: 16pt;
+}
+
+#button-demo {
+    padding-top: .5em;
+    padding-bottom: .5em;
+    padding-left: 1em;
+    padding-right: 1em;
+    background-color: #333;
+    color: #cecece;
+    font-size: 16pt;
+    border: 1px solid #666;
+}
+
+#div-demo {
+    width: 100%;
+    text-align: center;
+}
+
+#upload-div {
+    width: 100%;
 }

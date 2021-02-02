@@ -23,7 +23,8 @@ def build_win_matrix(data, alpha=0.1, player_name=None, group='specs'):
     opponentSpecs = get_opponent_specs(data)
 
     def _get_class(x):
-        return ' '.join(x.split(' ')[1:])
+        return ' '.join(x.split(' ')[1:] if 'Beast Mastery' not in x
+                        else ['Hunter'])
     if group == 'class':
         opponentSpecs = opponentSpecs.apply(lambda x: x.apply(_get_class))
         
@@ -65,9 +66,9 @@ def build_win_matrix(data, alpha=0.1, player_name=None, group='specs'):
     avgRatingChange = G['rating change'].mean()
 
     return pd.DataFrame([winRate, winLower, winUpper, fightCount,
-                         avgRatingChange],
+                         avgRatingChange, fightCount*avgRatingChange],
                         index=['win rate', 'lower', 'upper', 'N',
-                               'avg rating change']).T
+                               'avg rating change', 'total rating change']).T
 
 
 def get_player_field(data, name, field):
@@ -143,6 +144,55 @@ def get_opponent_specs(data):
                                                    + opponent.loc[:, t[k*2]]
     return opponentSpecs
 
+## think we just build the partner filter function here
+
+def get_team_mates(data):
+    is3v3 = np.any(pd.Series(data.columns).str.match('T0P2'))
+    nPlayers = 2 + is3v3
+    teamMateCol = pd.Series('T'+data.PlayerSide.astype(str)+'P<i>_Name')
+
+    teamMateCols = pd.DataFrame([teamMateCol.str.replace('<i>', str(k)) \
+                              for k in range(nPlayers)]).T
+
+    teamMates = teamMateCols.apply(lambda x: data.lookup(data.index, x), axis=0)
+
+    return teamMates
+
+
+def filter_by_partner(data, partner1, partner2=None):
+    if partner1 is None and partner2 is None:
+        return data
+    
+    teamMates = get_team_mates(data)
+    
+    if partner2 is None:
+        return data.loc[(teamMates == partner1).any(axis=1), :]
+
+    if partner1 is None:
+        return data.loc[(teamMates == partner2).any(axis=1), :]
+
+    return data.loc[(teamMates == partner1).any(axis=1) &\
+                    (teamMates == partner2).any(axis=1), :]
+
+
+def get_sessions(data):
+    data = data.sort_values(by='Time')
+    THRESHOLD = 3600 # more than an hour between games then diff sessions
+    timeDiff = data.Time.diff()
+    timeDiff.iloc[0] = 0
+    newSessionTime = (timeDiff > 3600)
+
+    teamMates = get_team_mates(data)
+    hashedTeamMates = teamMates.apply(lambda x:hash(''.join(sorted(x))), axis=1)
+    mateDiff = hashedTeamMates.diff()
+    mateDiff.iloc[0] = 0
+    newTeamMate = mateDiff > 0
+    
+    newSession = newTeamMate | newSessionTime
+
+    sessionList = np.cumsum(newSession)
+    
+    return sessionList
 
 def get_outcome(data):
     return pd.Series(np.double(data.loc[:, 'PlayerSide'] == data.loc[:, 'Winner']),
@@ -158,4 +208,10 @@ def get_team_mmr(data, opponent=False):
 
         return x.loc[mmrCol]
 
-    return data.apply(_get_team_mmr, axis=1)
+    postfightMMR = data.apply(_get_team_mmr, axis=1).values
+    firstGame = data.head(1)
+    prefightMMR = np.array(firstGame['T%i_MMR'%firstGame['PlayerSide']])
+
+    teamMMR = np.concatenate([prefightMMR, postfightMMR])
+    return teamMMR
+

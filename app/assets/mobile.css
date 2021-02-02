@@ -1,0 +1,48 @@
+@media screen and (max-width: 900px){
+
+    #div-metric-kpi-container {
+	width: 100%;
+	display: block;
+    }
+
+    #div-radio-bracket {
+	width: 100%;
+	display: block;
+    }
+
+    #div-dropdown-partner {
+	display: none;
+    }
+
+    #div-radio-partner {
+	width: 100%;
+	display: block;
+    }
+    
+    #div-main-menu {
+	width: 100%;
+    }
+
+    #tab-container {
+	display: none;
+    }
+
+    #div-metric-selection-1 {
+	width: 100%;
+	display: block;
+    }
+
+    #div-metric-selection-2 {
+	width: 100%;
+	display: block;
+    }
+
+    #div-spec-graph {
+	width: 100%;
+    }
+
+    #div-rating-graph {
+	display: none;
+    }
+
+}

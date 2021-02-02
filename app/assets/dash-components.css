@@ -1,3 +1,7 @@
+.dash-dropdown {
+    color: #eee;
+}
+
 .dash-bootstrap .Select-control {
   height: calc(1.5em + 0.75rem + 2px);
   font-size: 0.9375rem;
@@ -33,7 +37,7 @@
 }
 
 .dash-bootstrap .Select.is-disabled > .Select-control {
-  background-color: #ebebeb;
+    background-color: #ebebeb;
 }
 
 .dash-bootstrap .Select--multi .Select-value {
@@ -69,7 +73,7 @@
 
 .dash-bootstrap .Select--single > .Select-control .Select-value,
 .dash-bootstrap .Select-placeholder {
-  line-height: calc(1.5em + 0.75rem);
+    line-height: calc(1.5em + 0.75rem);
 }
 
 .dash-bootstrap .Select-input {

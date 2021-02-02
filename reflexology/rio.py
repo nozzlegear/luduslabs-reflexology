@@ -42,7 +42,10 @@ def parse_match_data(match):
 
 
 def parse_lua_file(file_name):
-    data = luadata.read(file_name, encoding='utf-8')
+    if len(file_name) < 50:
+        data = luadata.read(file_name, encoding='utf-8')
+    else:
+        data = luadata.unserialize(file_name)
 
     raw2v2 = get_arena(data['REFlexDatabase'], '2v2')
     raw3v3 = get_arena(data['REFlexDatabase'], '3v3')

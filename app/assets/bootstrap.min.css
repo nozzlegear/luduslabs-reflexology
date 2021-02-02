@@ -1,4 +1,5 @@
 
+
 .dash-bootstrap .form-group > div {
   display: block !important;
 }
@@ -238,7 +239,8 @@
 }
 
 .dash-bootstrap .Select.is-disabled > .Select-control {
-  background-color: #ebebeb;
+    background-color: #ebebeb;
+
 }
 
 .dash-bootstrap .has-value.Select--single > .Select-control .Select-value .Select-value-label,
@@ -251,7 +253,7 @@
 }
 
 .dash-bootstrap .Select-placeholder {
-  color: #999;
+  color: #eee;
   padding-left: 0.75rem;
   padding-right: 0.75rem;
 }

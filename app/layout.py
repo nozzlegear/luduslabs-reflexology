@@ -3,17 +3,19 @@ import dash_core_components as dcc
 import dash_table
 
 
-FONT_COLOR = '#cccccc'
+FONT_COLOR = '#d0d0d0'
 BGCOLOR = 'rgba(0,0,0,0)'
 
 TABLE_HEIGHT = 400
 
 metricOptions = [
+    {'label': 'Total rating change', 'value': 'total rating change'},    
     {'label': 'Games played', 'value': 'N'},
     {'label': 'Win rate', 'value': 'win rate'},
     {'label': 'Average rating change', 'value': 'avg rating change'}]
 
-tableColumns = ['Comp', 'Wins', 'Losses', 'Win rate (%)', 'Avg rating change']
+tableColumns = ['Comp', 'Wins', 'Losses', 'Win rate (%)',
+                'Avg rating change', 'Total rating change']
 
 NO_MARGIN = {'margin': '0px'}
 
@@ -42,7 +44,14 @@ def generate_menu():
                     html.Hr(className='kpi-divider'),
                     html.P('', id='metric-games-played',
                            className='app__metric__value')
+                ], className='div-metric-rating'),
+                html.Div([
+                    html.P('Sessions played', className='app__metric__title'),
+                    html.Hr(className='kpi-divider'),
+                    html.P('', id='metric-sessions-played',
+                           className='app__metric__value')
                 ], className='div-metric-rating')
+                
                 
             ], id='div-metric-kpi-container'),
             html.Div([
@@ -90,10 +99,14 @@ def generate_main_content():
 
 
 def generate_spec_graph():
-    return html.Div([
-        dcc.Graph(id='spec-graph', style={'width': '100%'},
-                  config={'displayModeBar': False})],
-                    id='div-spec-graph')
+    return dcc.Loading(
+        id='loading-spec-graph',
+        type='default',
+        children=html.Div([
+            dcc.Graph(id='spec-graph', style={'width': '100%',
+                                              'display': 'none'},
+                      config={'displayModeBar': False})],
+                          id='div-spec-graph'))
 
 
 def generate_metric_menu():
@@ -102,7 +115,7 @@ def generate_metric_menu():
                  children=[
                      html.H3('Metric', className='metric-title'),
                      dcc.Dropdown(id='metric-selection', options=metricOptions,
-                                  value='N', multi=False, clearable=False,
+                                  value='total rating change', multi=False, clearable=False,
                                   searchable=False)
                  ], className='dash-bootstrap div-metric-selection'),
         
@@ -116,11 +129,15 @@ def generate_metric_menu():
 
 
 def generate_rating_graph():
-    return html.Div([
-        dcc.Graph(id='rating-graph',
-                  style={'width': '90%'},
-                  config={'displayModeBar': False})
-    ], id='div-rating-graph')
+    return dcc.Loading(
+        id='loading-rating-graph',
+        type='default',
+        children=html.Div([
+            dcc.Graph(id='rating-graph',
+                      style={'width': '90%', 'display': 'none'},
+                      config={'displayModeBar': False})
+        ], id='div-rating-graph'))
+
 
 def generate_comp_menu():
     return html.Div([
@@ -156,7 +173,7 @@ def layout_comp_table():
                                  style_table={'height': TABLE_HEIGHT,
                                               'overflowY': 'scroll'},
                                  style_header={'height': 'auto',
-                                               'font-size': '14pt',
+                                               'font-size': '18pt',
                                                'font-family':
                                                'Helvetica, Arial, sans-serif',
                                                'backgroundColor': '#000',
@@ -166,7 +183,7 @@ def layout_comp_table():
                                  css=[dict(
                                      selector='.dash-spreadsheet td div',
                                      rule='''
-                                     min-width: 15vw;
+                                     min-width: 10vw;
                                      display: block;
                                      font-size: 12pt;
                                      text-align : center;
@@ -174,52 +191,74 @@ def layout_comp_table():
                                      '''),
                                       dict(selector='tr:hover',
                                            rule='background-color:#111')],
-                                 style_data={'backgroundColor': BGCOLOR}),
-            html.Br(),
-            html.Br(),
-            dash_table.DataTable(id='sum-comp-table',
-                                 columns=[{'name': col, 'id': col}
-                                          for col in tableColumns]
-                )
+                                 style_data={'backgroundColor': BGCOLOR})
         ], id='div-comp-content')], id='div-main-right')
 
-greetStrings = ['Welcome to REFlexology.',
-'''
-You can upload your own REFlex data and use the
-dashboard according to the Terms & Conditions. The file you are after
-is called REFlex.lua and is located in your WoW folder:
-World of Warcraft\...\
- ,
-''','''
-If you just want to take REFlexology for a  spin, click "Demo" below. 
-If you want to go back and explore your own arena data, just refresh
-the page and you'll be right back here.''']
 
 def generate_greeting_page():
     return html.Div([
-        html.P(string, className="greet-string") for string in greetStrings
-        ])
+    html.P('''
+REFlexology lets you upload your own REFlex data and gives you a breakdown
+of your arena performance. If you just want to take REFlexology for
+a spin, hit the demo button.''', className='greet-string'),
+        
+    html.Div(children=[
+        html.Button(id='button-demo', children="Let's do a demo")],
+            id='div-demo'),
+    html.P('''
+    If you want to use REFlexology on your own REFlex data, the file you are after
+    is called REFlex.lua and is buried deep in your WoW folder:
+    ''', className='greet-string'),
+        html.P('''
+        World of Warcraft\_retail_\WTF\Account\<ACCOUNTID>\<Server>\<Character>\SavedVariables\REFlex.lua
+        ''', className='greet-string'),
+        
+    html.P([html.B('The fine print: '), '''
+    We need to store and process your REFlex data in order to provide this service.
+    This data contains information about your arena games.
+    It should go without saying that uploading your data means you consent to us 
+    handling it, but data protection legislation (GDPR) means that we have to 
+    be explicit about getting consent. This is a good thing, though. If you're happy 
+    with us storing and processing your REFlex data, do carry on using the tool. If you 
+    don't want us handling your data, you can still check out the Demo feature.'''])
+    ]
+)
+
+def generate_logo():
+    return html.Div([html.Img(src='/static/logo.png',
+                              style={'width': '180px',
+                                     'align': 'center'})],
+                    style={'text-align': 'center', 'width':'100%'})
+
 
 def generate_upload_menu():
-      return dcc.Upload(
-        id='upload',
-        children=html.Div([
-            'Drag and Drop or ',
-            html.A('Select Files')
-        ]),
-        style={
-            'width': '100%',
-            'height': '60px',
-            'lineHeight': '60px',
-            'borderWidth': '1px',
-            'borderStyle': 'dashed',
-            'borderRadius': '5px',
-            'textAlign': 'center',
-            'margin': '10px'
-        },
-          multiple=False,
-          max_size=5*10**7 # 50mb max size
-    )
+      return html.Div([
+          dcc.Upload(id='upload',
+                     children=html.Div([
+                         'Drag and Drop or ',
+                         html.A('Click to Select Files')
+                     ]),
+                     style={
+                         'width': '100%',
+                         'height': '80px',
+                         'lineHeight': '60px',
+                         'borderWidth': '1px',
+                         'borderStyle': 'dashed',
+                         'borderRadius': '5px',
+                         'textAlign':'center',
+                         'margin': '10px'
+                     },
+                     multiple=False,
+                     max_size=5*10**7)
+          ], id='div-upload')
+
+
+def generate_character_confirmation():
+
+    return html.Div([
+        dcc.RadioItems(options=[], id='player-name-toggle'),
+        html.Button(id='player-name-confirm', value='Confirm')
+    ], id='player-name-toggle-div')
 
 
 def generate_layout():
@@ -228,10 +267,7 @@ def generate_layout():
             html.Div(id='data-store', style={'display': 'none'}),
             html.Div(id='player-name', style={'display': 'none'}),
             html.Div(id='hidden-comp-table', style={'display': 'none'}),
-            html.Div(id='div-main-top', children=[
-                html.H3('~ REFlexology ~', className='app__header__title'),
-                html.H4('by Geebs', className='app__header__subtitle')
-            ]),
+            html.Div(id='player-name-validation', style={'display': 'none'}),
             generate_menu(),
             html.Div([
                 generate_main_content()
@@ -241,7 +277,6 @@ def generate_layout():
         html.Div(children=[
             generate_greeting_page(),
             generate_upload_menu(),
-            html.Button(id='button-demo', children='Demo')
-        ], style={'display' : 'block'},
+            generate_logo()],
                  id='div-main-greet')
     ], id='div-mother')

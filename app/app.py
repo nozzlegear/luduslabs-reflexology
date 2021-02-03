@@ -208,7 +208,6 @@ def make_rating_plot(data, name='', partner1=None, partner2=None, keepIndex=None
         xd = np.diff(x)
         if any(xd > 1):
             d0 = np.where(xd>1)[0][0]
-            print(d0)
             x1 = x.iloc[:(d0+1)]
             y1 = y.iloc[:(d0+1)]
             x2 = x.iloc[(d0+1):]
@@ -403,15 +402,37 @@ def load_data(content, n_clicks):
         inputData = dataFile
                 
     data2v2, data3v3 = timeit(rio.parse_lua_file)(inputData)
-    data2v2 = data2v2.loc[data2v2.Season==CURRENT_SEASON, :]
-    data3v3 = data3v3.loc[data3v3.Season==CURRENT_SEASON, :]
+    if 'Season' in data2v2.columns:
+        data2v2 = data2v2.loc[data2v2.Season==CURRENT_SEASON, :]
+    if 'Season' in data3v3.columns:
+        data3v3 = data3v3.loc[data3v3.Season==CURRENT_SEASON, :]
 
 
     if data2v2.shape[0] > 0:
-        # Filter out data from previous sesasons
+
+        N = data2v2.shape[0]
+        data2v2 = data2v2.dropna(axis=1, thresh=data2v2.shape[0]//2)\
+                         .dropna(subset=['T0P0_Class','T0P1_Class',
+                                         'T1P0_Class','T1P1_Class'],
+                                 how='any', axis=0)
+        M = data2v2.shape[0]
+        if N != M:
+            logging.warn('REMOVED COLUMNS FROM DATA!')
+
         data2v2['session'] = analysis.get_sessions(data2v2)
 
     if data3v3.shape[0] > 0:
+        N = data3v3.shape[0]
+
+        data3v3 = data3v3.dropna(axis=1, thresh=data3v3.shape[0]//2)\
+                         .dropna(subset=['T0P0_Class','T0P1_Class', 'T0P2_Class',
+                                         'T1P0_Class','T1P1_Class', 'T1P2_Class'],
+                                 how='any', axis=0)
+        M = data3v3.shape[0]
+        
+        if N != M:
+            logging.warn('REMOVED COLUMNS FROM DATA!')
+
         data3v3['session'] = analysis.get_sessions(data3v3)
 
     matchCount = get_player_match_count(data2v2, data3v3)
@@ -447,8 +468,6 @@ def load_data(content, n_clicks):
 def update_hidden_comp_table(partner1, partner2, bracket, 
                              player_name, selected, json_data):
     logging.info('UPDATING HIDDEN COMP TABLE')
-
-    
 
     if json_data is None:
         raise PreventUpdate
@@ -491,6 +510,7 @@ def update_hidden_comp_table(partner1, partner2, bracket,
 @timeit
 def update_plots(metric, partner1, partner2, bracket, group_by,
                  player, selected, json_data):
+
 
     logging.info('UPDATE PLOTS')
     if json_data is None:

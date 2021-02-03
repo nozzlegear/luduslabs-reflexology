@@ -140,7 +140,10 @@ def make_spec_plot(data, col, player_name=None, group='spec'):
                 'paper_bgcolor': BGCOLOR,
                 'plot_bgcolor': BGCOLOR,
                 'font': {'color': FONT_COLOR, 'size': FONT_SIZE1},
-                'xaxis_title': xlabel})
+                'xaxis_title': xlabel,
+                'xaxis': {'fixedrange': True},
+                'yaxis': {'fixedrange': True}
+    })
 
     fig.update_yaxes(showgrid=False, dtick=1)
     fig.update_xaxes(gridcolor='rgba(255,255,255,0.2)')
@@ -399,7 +402,7 @@ def load_data(content, n_clicks):
     else:
         inputData = dataFile
                 
-    data2v2, data3v3 = rio.parse_lua_file(inputData)
+    data2v2, data3v3 = timeit(rio.parse_lua_file)(inputData)
     data2v2 = data2v2.loc[data2v2.Season==CURRENT_SEASON, :]
     data3v3 = data3v3.loc[data3v3.Season==CURRENT_SEASON, :]
 
@@ -552,33 +555,21 @@ def reset_spec_2_value(_):
     ])
 @timeit
 def display_comp_table(comp_data, class1, spec1, class2, spec2):
-    logging.info('DISPLAY COMP TABLE')    
+    logging.info('DISPLAY COMP TABLE')
+    if comp_data is None:
+        raise PreventUpdate
+
     compTable = pd.DataFrame(json.loads(comp_data))
 
     def _get_spec_markdown(x):
         x = x.strip()
-        if x == 'Beast Mastery Hunter':
-            return 'Beast Mastery'
-        else:
-            spec = x.split(' ')[0].lower()
-        wowclass = ''.join(x.split(' ')[1:]).lower()
+        spec = get_spec(x).replace(' ','').lower()
+        wowclass = get_class(x).replace(' ', '').lower()
         return '![classicon](/static/icons/%s_%s.png "%s")'%(wowclass, spec, x)
 
     
     def _get_comp_markdown(comp):
         return ' '.join([_get_spec_markdown(x) for x in comp.split(',')])
-
-    
-    def _get_class(x):
-        '''
-        input will be "Beast Mastery Hunter", "Frost Death Knight", "Arms Warrior"
-        '''
-        x = x.strip()
-        if x == 'Beast Mastery Hunter':
-            return 'Hunter'
-        else:
-            return ' '.join(x.split(' ')[1:])
-
 
     def get_filter(filterClass, filterSpec, opponentClassSpec1, opponentClassSpec2):
         filterClassSpec = None
@@ -590,8 +581,8 @@ def display_comp_table(comp_data, class1, spec1, class2, spec2):
             return np.ones(len(opponentClassSpec1), dtype=bool)
         
         elif filterClassSpec is None:
-            opponentClass1 = opponentClassSpec1.apply(_get_class)
-            opponentClass2 = opponentClassSpec2.apply(_get_class)
+            opponentClass1 = opponentClassSpec1.apply(get_class)
+            opponentClass2 = opponentClassSpec2.apply(get_class)
             return (opponentClass1 == filterClass) | (opponentClass2 == filterClass)
 
         else:
@@ -652,10 +643,12 @@ def get_class_from_markdown_string(comp, get_spec=False):
     )
 @timeit
 def update_class1_selection(data):
-    logging.info('UPDATE CLASS SELECTION 1')    
+    logging.info('UPDATE CLASS SELECTION 1')
+    if data is None:
+        raise PreventUpdate
     df = pd.DataFrame(json.loads(data))
     specClasses = df.Comp.str.split(',').explode().str.strip()
-    classes = specClasses.apply(lambda x: ' '.join(x.split(' ')[1:]))
+    classes = specClasses.apply(lambda x: get_class(x))
     classSelection = [{'label': c, 'value': c} for c in set(classes)]
     
     return classSelection
@@ -673,8 +666,8 @@ def update_spec1_selection(class1, data):
     
     df = pd.DataFrame(json.loads(data))
     specClasses = df.Comp.str.split(',').explode().str.strip()
-    classes = specClasses.apply(lambda x: ' '.join(x.split(' ')[1:]))
-    specs = specClasses.apply(lambda x: x.split(' ')[0])
+    classes = specClasses.apply(get_class)
+    specs = specClasses.apply(get_spec)
     currentSpecs = specs[classes == class1]
     specSelection = [{'label': c, 'value': c} for c in set(currentSpecs)]
 
@@ -695,8 +688,8 @@ def update_class2_selection(class1, spec1, data, class2):
 
     df = pd.DataFrame(json.loads(data))
     specClasses = df.Comp.str.split(',').explode().str.strip()
-    classes = specClasses.apply(lambda x: ' '.join(x.split(' ')[1:]))
-    specs = specClasses.apply(lambda x: x.split(' ')[0])
+    classes = specClasses.apply(get_class)
+    specs = specClasses.apply(get_spec)
 
     if spec1 is None:
         idx = (classes == class1)
@@ -792,20 +785,16 @@ def update_kpis(bracket, player, partner1, partner2, selected, json_data):
 
 
 @app.callback(
-    Output('div-tab-content', 'children'),
+    [Output('div-tab-1', 'style'),
+     Output('div-tab-2', 'style')],
     [Input('main-tab', 'value')])
 @timeit
 def display_tab(tab):
-    logging.info('DISPLAY TABS')    
     if tab == 'graph':
-        return [generate_metric_menu(),
-                html.Div(id='div-graphs',children=[
-                    generate_spec_graph(),
-                    generate_rating_graph()])
-                ]
-    
+        return {'display': 'block'}, {'display': 'none'}
     elif tab == 'comp':
-        return [layout_comp_table()]
+        return {'display': 'none'}, {'display': 'block'}
+
 
 
 @app.callback(

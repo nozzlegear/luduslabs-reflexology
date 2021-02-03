@@ -94,7 +94,15 @@ def generate_main_content():
                                        style=TAB_STYLE,
                                        selected_style=SELECTED_TAB_STYLE)
                            ])], id='tab-container'),
-        html.Div(id='div-tab-content')],
+        html.Div(id='div-tab-1', className='div-tab-content',
+                 children=[generate_metric_menu(),
+                html.Div(id='div-graphs',children=[
+                    generate_spec_graph(),
+                    generate_rating_graph()])
+                 ]),
+        html.Div(id='div-tab-2', className='div-tab-content',
+                 children=[layout_comp_table()])
+    ],
                     id='div-tab-main')
 
 

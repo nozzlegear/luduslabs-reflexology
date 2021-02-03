@@ -40,6 +40,17 @@ def parse_match_data(match):
 
     return data
 
+from time import time
+def timeit(func):
+    def inner(*args, **kwargs):
+        tic = time()
+        x = func(*args, **kwargs)
+        toc = time()
+        print('%s took %.2f s'%(func.__name__, toc-tic))
+        return x
+
+    return inner
+    
 
 def parse_lua_file(file_name):
     if len(file_name) < 50:

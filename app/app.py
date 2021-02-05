@@ -409,7 +409,6 @@ def load_data(content, n_clicks):
 
 
     if data2v2.shape[0] > 0:
-
         N = data2v2.shape[0]
         data2v2 = data2v2.dropna(axis=1, thresh=data2v2.shape[0]//2)\
                          .dropna(subset=['T0P0_Class','T0P1_Class',

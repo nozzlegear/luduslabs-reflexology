@@ -25,6 +25,7 @@ def build_win_matrix(data, alpha=0.1, player_name=None, group='specs'):
     def _get_class(x):
         return ' '.join(x.split(' ')[1:] if 'Beast Mastery' not in x
                         else ['Hunter'])
+
     if group == 'class':
         opponentSpecs = opponentSpecs.apply(lambda x: x.apply(_get_class))
         

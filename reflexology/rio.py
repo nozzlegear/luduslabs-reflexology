@@ -1,9 +1,75 @@
 import luadata
 import pandas as pd
 
-cols = ['Name', '', '', '', '', 'Team', 'Race', 'Class', '', 'Damage',
+translation = {'Protección': 'Protection',               
+               'Sagrada': 'Holy',
+               'Sagrado': 'Holy',
+               'Reprensión': 'Retribution',
+               'Disciplina': 'Discipline',
+               'Sutileza': 'Subtlety',
+               'Assassinat': 'Assassination',
+               'Finesse': 'Subtlety',
+               'Sacré': 'Holy',
+               'Restauration': 'Restoration',
+               'Feu': 'Fire',
+               'Restauración': 'Restoration',
+               'Armas': 'Arms',
+               'Vindicte': 'Retribution',
+               'Farouche' : 'Feral',
+               'Survie': 'Survival',
+               'Givre': 'Frost',
+               'Ombre': 'Shadow',
+               'Viajero del viento': 'Windwalker',
+               'Viajera del viento': 'Windwalker',
+               'Escarcha': 'Frost',
+               'Equilibrio': 'Balance',
+               'Supervivencia': 'Survival',
+               'Aflicción': 'Affliction',
+               'Profano': 'Unholy',
+               'Profana': 'Unholy',
+               'Tejedor de niebla': 'Mistweaver',
+               'Tejedora de niebla': 'Mistweaver',
+               'Puntería': 'Marksmanship',
+               'Punterío': 'Marksmanship',
+               'Fuega': 'Fire',
+               'Fuego': 'Fire',
+               'Arcano': 'Arcane',
+               'Arcana': 'Arcane',
+               'Destrucción': 'Destruction',
+               'Marche-vent': 'Windwalker',
+               'Devastación': 'Havoc',
+               'Tisse-brume': 'Mistweaver',
+               'Armes': 'Arms',
+               'Amélioration': 'Restoration',
+               'Équilibre': 'Balance',
+               'Fureur': 'Fury',
+               'Mejora': 'Enhancement',
+               'Sombra': 'Shadow',
+               'Précision': 'Marksmanship',
+               'Élémentaire': 'Elemental',
+               'Maîtrise des bêtes': 'Beast Mastery',
+               'Dévastation': 'Havoc',
+               'Démonologie': 'Demonology',
+               'Impie': 'Unholy'
+}
+
+cols = ['Name', '', '', '', '', 'Team', 'Race', '', 'Class', 'Damage',
         'Healing', 'Rating', 'Rating change', '', '', 'Spec', '']
 
+def translate(data):
+    specCols = [k for k in data.columns if '_Spec' in k]
+    for col in specCols:
+        data.loc[:, col] = data.loc[:, col].replace(translation)
+
+    return data
+
+def fix_class(data):
+    classCols = [k for k in data.columns if '_Class' in k]
+    for col in classCols:
+        data.loc[:, col] = data.loc[:, col].replace({'Demonhunter': 'Demon Hunter',
+                                                    'Deathknight': 'Death Knight'})
+
+    return data
 
 def parse_player(player):
     return [(cols[i], player[k]) for i, k in enumerate(range(0, len(player), 3))]
@@ -24,7 +90,7 @@ def parse_match_data(match):
 
     def parse_team(team):
         return {'T%iP%i_%s'%(player['Team'], k, col) : player[col] \
-                for k,player in enumerate(team)\
+                for k, player in enumerate(team)\
                 for col in player}
 
     matchData = {k: match[k] for k in ['Map', 'Season', 'Duration',
@@ -50,10 +116,16 @@ def timeit(func):
         return x
 
     return inner
-    
+
+def capitalise_class(df):
+    classCols = [k for k in df.columns if '_Class' in k]
+    for c in classCols:
+        df.loc[:, c] = df[c].str.capitalize()
+
+    return df
 
 def parse_lua_file(file_name):
-    if len(file_name) < 50:
+    if len(file_name) < 100:
         data = luadata.read(file_name, encoding='utf-8')
     else:
         data = luadata.unserialize(file_name)
@@ -61,7 +133,7 @@ def parse_lua_file(file_name):
     raw2v2 = get_arena(data['REFlexDatabase'], '2v2')
     raw3v3 = get_arena(data['REFlexDatabase'], '3v3')
 
-    match2v2 = pd.DataFrame([parse_match_data(k) for k in raw2v2])
-    match3v3 = pd.DataFrame([parse_match_data(k) for k in raw3v3])
+    match2v2 = fix_class(translate(capitalise_class(pd.DataFrame([parse_match_data(k) for k in raw2v2]))))
+    match3v3 = fix_class(translate(capitalise_class(pd.DataFrame([parse_match_data(k) for k in raw3v3]))))
 
     return match2v2, match3v3

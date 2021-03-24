@@ -1,7 +1,52 @@
 import luadata
 import pandas as pd
 
-translation = {'Protección': 'Protection',               
+translation = {'Protección': 'Protection',
+               'Guardián': 'Guardian',
+               'Caos': 'Havoc',
+               'Treffsicherheit': 'Marksmanship',
+               'Gardien': 'Guardian',
+               'Sangre': 'Blood',
+               'Elementar': 'Elemental',
+               'Feuer': 'Fire',
+               'Disziplin': 'Discipline',
+               'Wiederherstellung': 'Restoration',
+               'Waffen': 'Arms',
+               'Rachsucht': 'Vengeance',
+               'Schatten': 'Shadow',
+               'Gleichgewicht': 'Balance',
+               'Täuschung': 'Subtlety',
+               'Braumeister': 'Brewmaster',
+               'Verwüstung': 'Havoc',
+               'Wildheit': 'Feral',
+               'Nebelwirker': 'Mistweaver',
+               'Unheilig': 'Unholy',
+               'Heilig': 'Holy',
+               'Vergeltung': 'Retribution',
+               'Windläufer': 'Windwalker',
+               'Gebrechen': 'Affliction',
+               'Furor': 'Fury',
+               'Schutz': 'Protection',
+               'Blut': 'Blood',
+               'Zerstörung': 'Destruction',
+               'Meucheln': 'Assassination',
+               'Tierherrschaft': 'Beast Mastery',
+               'Überleben': 'Survival',
+               'Arkan': 'Arcane',
+               'Wächter': 'Guardian',
+               'Maître brasseur': 'Brewmaster',
+               'Forajido': 'Outlaw',
+               'Forajida': 'Outlaw',
+               'Verstärkung': 'Enhancement',
+               'Gesetzlosigkeit': 'Outlaw',
+               'Arcanes': 'Arcane',
+               'Dämonologie': 'Demonology',
+               'Guardiana': 'Guardian',
+               'Guardiano': 'Guardian',
+               'Venganza': 'Vengeance',
+               'Bestias': 'Beast Mastery',
+               'Maestro cervecero': 'Brewmaster',
+               'Maestra cervecera': 'Brewmaster',
                'Sagrada': 'Holy',
                'Sagrado': 'Holy',
                'Reprensión': 'Retribution',
@@ -15,7 +60,7 @@ translation = {'Protección': 'Protection',
                'Restauración': 'Restoration',
                'Armas': 'Arms',
                'Vindicte': 'Retribution',
-               'Farouche' : 'Feral',
+               'Farouche': 'Feral',
                'Survie': 'Survival',
                'Givre': 'Frost',
                'Ombre': 'Shadow',
@@ -40,7 +85,7 @@ translation = {'Protección': 'Protection',
                'Devastación': 'Havoc',
                'Tisse-brume': 'Mistweaver',
                'Armes': 'Arms',
-               'Amélioration': 'Restoration',
+               'Amélioration': 'Enhancement',
                'Équilibre': 'Balance',
                'Fureur': 'Fury',
                'Mejora': 'Enhancement',
@@ -50,7 +95,8 @@ translation = {'Protección': 'Protection',
                'Maîtrise des bêtes': 'Beast Mastery',
                'Dévastation': 'Havoc',
                'Démonologie': 'Demonology',
-               'Impie': 'Unholy'
+               'Impie': 'Unholy',
+               'Hors-la-loi': 'Outlaw'
 }
 
 cols = ['Name', '', '', '', '', 'Team', 'Race', '', 'Class', 'Damage',
@@ -80,6 +126,13 @@ def get_arena(data, bracket, rated=True):
     playersNum = {'2v2': 4, '3v3': 6}[bracket.lower()]
     return [x for x in filteredData if x['PlayersNum'] == playersNum
             and x['isArena'] and x['isRated'] == rated]
+
+
+def get_rbg(data, rated=True):
+    filteredData = [x for x in data if type(x) == dict]
+    playersNum = 20
+    return [x for x in filteredData if x['PlayersNum'] == playersNum
+            and not x['isArena'] and x['isRated'] == rated]
 
 
 def parse_match_data(match):
@@ -137,3 +190,16 @@ def parse_lua_file(file_name):
     match3v3 = fix_class(translate(capitalise_class(pd.DataFrame([parse_match_data(k) for k in raw3v3]))))
 
     return match2v2, match3v3
+
+def parse_lua_file_rbg(file_name):
+    if len(file_name) < 100:
+        data = luadata.read(file_name, encoding='utf-8')
+    else:
+        data = luadata.unserialize(file_name)
+
+    rawRbg = get_rbg(data['REFlexDatabase'])
+
+    matchRbg = fix_class(translate(capitalise_class(pd.DataFrame([parse_match_data(k)
+                                                                  for k in rawRbg]))))
+
+    return matchRbg

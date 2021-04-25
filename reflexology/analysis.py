@@ -125,7 +125,8 @@ def get_player_teams(data):
     
     return data.apply(_get_player_teams, axis=1)
 
-def get_opponent_specs(data):
+
+def get_opponent_specs(data, opponent=True):
     is3v3 = np.any(pd.Series(data.columns).str.match('T0P2'))
 
     nPlayers = 2 + is3v3
@@ -137,7 +138,11 @@ def get_opponent_specs(data):
     t1 = [t.replace('T0', 'T1') for t in t0]
 
     opponentSpecs = pd.DataFrame(index=data.index, columns=np.arange(nPlayers))
-    opponentSide = 1 - data.loc[:, 'PlayerSide']
+    if opponent:
+        opponentSide = 1 - data.loc[:, 'PlayerSide']
+    else:
+        opponentSide = data.loc[:, 'PlayerSide']
+    
     for p, t in enumerate([t0,t1]):
         opponent = data.loc[opponentSide == p, t]
         for k in range(nPlayers):

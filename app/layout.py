@@ -1,12 +1,13 @@
 import dash_html_components as html
 import dash_core_components as dcc
 import dash_table
-
+import requests
 
 FONT_COLOR = '#d0d0d0'
 BGCOLOR = 'rgba(0,0,0,0)'
 
 TABLE_HEIGHT = 400
+
 
 metricOptions = [
     {'label': 'Total rating change', 'value': 'total rating change'},    
@@ -14,7 +15,8 @@ metricOptions = [
     {'label': 'Win rate', 'value': 'win rate'},
     {'label': 'Average rating change', 'value': 'avg rating change'}]
 
-tableColumns = ['Comp', 'Wins', 'Losses', 'Win rate (%)',
+
+tableColumns = ['Comp', 'Games', 'Record', 'Win rate (%)',
                 'Avg rating change', 'Total rating change']
 
 NO_MARGIN = {'margin': '0px'}
@@ -84,7 +86,7 @@ def generate_main_content():
         html.Div([dcc.Tabs(id='main-tab', value='graph',
                            parent_className='tabs-parent',
                            children=[
-                               dcc.Tab(label='Graphical', value='graph',
+                               dcc.Tab(label='Graphical overview', value='graph',
                                        className='menu-tab',
                                        style=TAB_STYLE,
                                        selected_style=SELECTED_TAB_STYLE),
@@ -93,6 +95,10 @@ def generate_main_content():
                                        className='menu-tab',
                                        style=TAB_STYLE,
                                        selected_style=SELECTED_TAB_STYLE)
+                               # dcc.Tab(label='Analysis', value='analysis',
+                               #         className='menu-tab',
+                               #         style=TAB_STYLE,
+                               #         selected_style=SELECTED_TAB_STYLE)
                            ])], id='tab-container'),
         html.Div(id='div-tab-1', className='div-tab-content',
                  children=[generate_metric_menu(),
@@ -101,7 +107,9 @@ def generate_main_content():
                     generate_rating_graph()])
                  ]),
         html.Div(id='div-tab-2', className='div-tab-content',
-                 children=[layout_comp_table()])
+                 children=[layout_comp_table()]),
+        html.Div(id='div-tab-3', className='div-tab-content',
+                 children=[generate_analysis_page()])
     ],
                     id='div-tab-main')
 
@@ -170,6 +178,18 @@ def generate_comp_menu():
                          placeholder='Filter by spec')
             ], id='div-class-selection-2', style={'display': 'none'}),
 
+        html.Div([
+            dcc.Checklist(options=[
+                {'value': 'grouped', 'label': 'Group healers'}
+                ], id='group-healers')],
+                 id='div-group-healers'),
+        
+        html.Div([
+            html.Button('Export to CSV', 'download-button',
+                        className="reflexology-button"),
+            dcc.Download(id='download-csv')
+        ], id='div-download')
+
     ], className='div-class-selection-outer dash-bootstrap')
 
 
@@ -209,6 +229,10 @@ def layout_comp_table():
         ], id='div-comp-content')], id='div-main-right')
 
 
+def generate_analysis_page():
+    return html.Div(id='analysis', children=[])
+
+
 def generate_greeting_page():
     return html.Div([
     html.P('''
@@ -217,7 +241,8 @@ of your arena performance. If you just want to take REFlexology for
 a spin, hit the demo button.''', className='greet-string'),
         
     html.Div(children=[
-        html.Button(id='button-demo', children="Let's do a demo")],
+        html.Button(id='button-demo', children="Let's do a demo",
+                    className="reflexology-button")],
             id='div-demo'),
     html.P('''
     If you want to use REFlexology on your own REFlex data, the file you are after
@@ -279,6 +304,7 @@ def generate_layout():
     return html.Div([
         html.Div([
             html.Div(id='data-store', style={'display': 'none'}),
+            html.Div(id='opponent-data', style={'display': 'none'}),            
             html.Div(id='player-name', style={'display': 'none'}),
             html.Div(id='hidden-comp-table', style={'display': 'none'}),
             html.Div(id='player-name-validation', style={'display': 'none'}),

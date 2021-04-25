@@ -5,12 +5,11 @@ import dash_html_components as html
 import os
 import sys
 import logging
+import requests
+from flask import jsonify
 
 import base64
-import io
 import hashlib
-
-import re
 
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
@@ -24,12 +23,21 @@ from time import time
 
 from layout import (generate_layout, BGCOLOR, FONT_COLOR,
                     generate_spec_graph, generate_rating_graph,
-                    generate_metric_menu, layout_comp_table)
+                    generate_metric_menu, layout_comp_table, tableColumns)
 
 baseDir = os.path.dirname(os.path.abspath(__file__)) + '/../'
 sys.path.append(baseDir)
 
 from reflexology import rio, analysis
+
+MICROSERVICES_HOST = 'http://138.68.75.83:8182'
+#MICROSERVICES_HOST = 'http://localhost:8182'
+MATCHUP_URL = '/matchup/<bracket>'
+
+
+HEALERS = ['Holy Paladin', 'Holy Priest', 'Discipline Priest',
+           'Restoration Shaman', 'Restoration Druid', 'Mistweaver Monk']
+
 
 def timeit(func):
     def inner(*args, **kwargs):
@@ -150,6 +158,7 @@ def make_spec_plot(data, col, player_name=None, group='spec'):
     
     return fig
 
+
 @timeit
 def make_rating_plot(data, name='', partner1=None, partner2=None, keepIndex=None):
 
@@ -227,7 +236,7 @@ def make_rating_plot(data, name='', partner1=None, partner2=None, keepIndex=None
 
     ))
 
-        
+
     fig.update_layout(xaxis_title='Games played',
                       yaxis_title='Rating',
                       legend=dict(yanchor='top',
@@ -248,6 +257,10 @@ def make_rating_plot(data, name='', partner1=None, partner2=None, keepIndex=None
     return fig
 
 
+def make_analysis_page(playerData, opponentData):
+    pass
+
+
 def make_comp_table(data, playerName):
     opponentSpecs = analysis.get_opponent_specs(data)
 
@@ -265,14 +278,16 @@ def make_comp_table(data, playerName):
     winCount = compOutcome.groupby('Comp')['Win'].sum()
     fightCount = compOutcome.groupby('Comp')['Win'].count()
     winRate = np.round(winCount/fightCount * 100, 1)
-    avgRatingChange = np.round(compOutcome.groupby('Comp')['Rating change'].mean(), 1)
+    avgRatingChange = compOutcome.groupby('Comp')['Rating change'].mean()
     lossCount = fightCount-winCount
 
     tic = time()
     comps = pd.Series(fightCount.index).apply(lambda x:x.strip('(').strip(')')).values
 
+
     compTable = pd.DataFrame([comps, winCount, lossCount,
-                              winRate, avgRatingChange, avgRatingChange*fightCount],
+                              winRate, np.round(avgRatingChange, 1),
+                              np.round(avgRatingChange*fightCount, 0)],
                              index=['Comp', 'Wins', 'Losses', 'Win rate (%)',
                                     'Avg rating change', 'Total rating change']).T
 
@@ -454,6 +469,22 @@ def load_data(content, n_clicks):
     return jsonData, playerName
 
 
+'''
+@app.callback(
+    Output('opponent-data', 'children'),
+    [Input('data-store', 'children')]
+    )
+def load_matchup_data(_):
+    data = {}
+    for bracket in ['2v2', '3v3']:
+        url = MICROSERVICES_HOST + MATCHUP_URL.replace('<bracket>', bracket)
+        content = requests.get(url).content.decode()
+        data[bracket] = json.loads(content)
+
+    return json.dumps(data)
+'''
+
+
 @app.callback(
     Output('hidden-comp-table', 'children'),
     [Input('partner1-selection', 'value'),
@@ -497,7 +528,8 @@ def update_hidden_comp_table(partner1, partner2, bracket,
     [Output('spec-graph', 'figure'),
      Output('spec-graph', 'style'),
      Output('rating-graph', 'figure'),
-     Output('rating-graph', 'style')],
+     Output('rating-graph', 'style'),
+     Output('analysis', 'children')],
     [Input('metric-selection', 'value'),
      Input('partner1-selection', 'value'),
      Input('partner2-selection', 'value'),
@@ -509,7 +541,6 @@ def update_hidden_comp_table(partner1, partner2, bracket,
 @timeit
 def update_plots(metric, partner1, partner2, bracket, group_by,
                  player, selected, json_data):
-
 
     logging.info('UPDATE PLOTS')
     if json_data is None:
@@ -531,17 +562,18 @@ def update_plots(metric, partner1, partner2, bracket, group_by,
         keptBracketData = bracketData
         keepIndex = None
 
-
     if bracketData.shape[0] == 0:
         raise PreventUpdate
 
     logging.info('Filtering data')
     filteredData = filter_data(keptBracketData, partners)
+    
 
     return (make_spec_plot(filteredData, metric, player, group_by),
             {'display': 'block'},
             make_rating_plot(bracketData, player, partner1, partner2, keepIndex),
-            {'display': 'block'})
+            {'display': 'block'},
+            [])
 
 
 @app.callback(
@@ -564,27 +596,87 @@ def reset_spec_2_value(_):
     return None
 
 
+def strip_and_append_healer(x):
+    if 'Healer' in x:
+        return x.replace('Healer, ','').replace(', Healer','') + ', Healer'
+
+    return x
+
+
+def aggregate_fields(x):
+    wins = x['Wins'].sum()
+    losses = x['Losses'].sum()
+    games = wins + losses
+
+    ratingChange = x['Total rating change'].sum()
+    return pd.Series([
+        x.loc[:, 'Comp'].iloc[0],
+        wins,
+        losses,
+        np.round(wins/games * 100, 1),
+        np.round(ratingChange/games, 1),
+        np.round(ratingChange, 0)], index=x.columns)
+
+
+@app.callback(
+    Output('download-csv', 'data'),
+    [Input('download-button', 'n_clicks')],
+    [State('comp-table', 'data')],
+    prevent_initial_call=True
+    )
+def export_to_csv(_, compTable):
+    compTable = pd.DataFrame(compTable)
+    print(compTable.loc[:, 'Comp'].iloc[0])
+
+    compTable.loc[:, 'Comp'] = compTable.loc[:, 'Comp']\
+                                        .str.findall('(".*?")')\
+                                            .apply(lambda x: ', '.join(x).replace('"', ''))
+
+    return dcc.send_data_frame(compTable.to_csv, 'ludus_labs_reflexology_extract.csv')
+
+
 @app.callback(
     Output('comp-table', 'data'),
     [Input('hidden-comp-table', 'children'),
      Input('class-selection-1', 'value'),
      Input('spec-selection-1', 'value'),
      Input('class-selection-2', 'value'),
-     Input('spec-selection-2', 'value')
+     Input('spec-selection-2', 'value'),
+     Input('group-healers', 'value')
     ])
 @timeit
-def display_comp_table(comp_data, class1, spec1, class2, spec2):
+def display_comp_table(comp_data, class1, spec1, class2, spec2, group_healers):
     logging.info('DISPLAY COMP TABLE')
     if comp_data is None:
         raise PreventUpdate
 
     compTable = pd.DataFrame(json.loads(comp_data))
 
+    if group_healers is not None:
+        if 'grouped' in group_healers:
+            compTable.loc[:, 'Comp'] = compTable.loc[:, 'Comp'].replace(
+                regex='('+'|'.join(HEALERS)+')',
+                value='Healer').apply(strip_and_append_healer)
+
+            compTable = compTable.groupby('Comp').apply(aggregate_fields)
+            compTable.loc[:, 'N'] = compTable['Wins'] + compTable['Losses']
+            compTable = compTable.sort_values(by='N', ascending=False)\
+                                 .drop('N', axis=1)
+
+
+
+
+    print(compTable)
+
+
     def _get_spec_markdown(x):
         x = x.strip()
+        if x.lower() == 'healer':
+            return '![classicon](/static/spec-icons/healer.png "Healer")'
+
         spec = get_spec(x).replace(' ','').lower()
         wowclass = get_class(x).replace(' ', '').lower()
-        return '![classicon](/static/icons/%s_%s.png "%s")'%(wowclass, spec, x)
+        return '![classicon](/static/spec-icons/%s-%s.png "%s")'%(wowclass, spec, x)
 
     
     def _get_comp_markdown(comp):
@@ -620,7 +712,12 @@ def display_comp_table(comp_data, class1, spec1, class2, spec2):
     compsHTML = np.array([_get_comp_markdown(x) for x in dispCompTable.Comp])
     dispCompTable.loc[:, 'Comp'] = compsHTML
 
-    return dispCompTable.to_dict('records')
+    dispCompTable.loc[:, 'Games'] = dispCompTable['Wins'] + dispCompTable['Losses']
+    dispCompTable.loc[:, 'Record'] = dispCompTable['Wins'].astype(np.int64).astype(str) + \
+                                     ' - ' + dispCompTable['Losses'].astype(np.int64).astype(str)
+
+    dispTable = dispCompTable.loc[:, tableColumns].to_dict('records')
+    return dispTable
 
 
 
@@ -668,7 +765,7 @@ def update_class1_selection(data):
     df = pd.DataFrame(json.loads(data))
     specClasses = df.Comp.str.split(',').explode().str.strip()
     classes = specClasses.apply(lambda x: get_class(x))
-    classSelection = [{'label': c, 'value': c} for c in set(classes)]
+    classSelection = [{'label': c, 'value': c} for c in sorted(set(classes))]
     
     return classSelection
 
@@ -688,7 +785,7 @@ def update_spec1_selection(class1, data):
     classes = specClasses.apply(get_class)
     specs = specClasses.apply(get_spec)
     currentSpecs = specs[classes == class1]
-    specSelection = [{'label': c, 'value': c} for c in set(currentSpecs)]
+    specSelection = [{'label': c, 'value': c} for c in sorted(set(currentSpecs))]
 
     return specSelection
 
@@ -721,7 +818,7 @@ def update_class2_selection(class1, spec1, data, class2):
 
     currentClasses = classes[partnerIndices]
 
-    return ([{'label': c, 'value': c} for c in set(currentClasses)],
+    return ([{'label': c, 'value': c} for c in sorted(set(currentClasses))],
             {'display': 'inline-block'})
 
 @app.callback(
@@ -753,7 +850,7 @@ def update_spec2_selection(class2, class1, spec1, data):
 
     currentSpecs = specs[partnerIndices & (classes == class2)]
 
-    return [{'label': c, 'value': c} for c in set(currentSpecs)]
+    return [{'label': c, 'value': c} for c in sorted(set(currentSpecs))]
 
 @app.callback(
     [Output('metric-rating-change', 'children'),
@@ -805,14 +902,17 @@ def update_kpis(bracket, player, partner1, partner2, selected, json_data):
 
 @app.callback(
     [Output('div-tab-1', 'style'),
-     Output('div-tab-2', 'style')],
+     Output('div-tab-2', 'style'),
+     Output('div-tab-3', 'style')],
     [Input('main-tab', 'value')])
 @timeit
 def display_tab(tab):
     if tab == 'graph':
-        return {'display': 'block'}, {'display': 'none'}
+        return {'display': 'block'}, {'display': 'none'}, {'display': 'none'}
     elif tab == 'comp':
-        return {'display': 'none'}, {'display': 'block'}
+        return {'display': 'none'}, {'display': 'block'}, {'display': 'none'}
+    elif tab == 'analysis':
+        return {'display': 'none'}, {'display': 'none'}, {'display': 'block'}
 
 
 

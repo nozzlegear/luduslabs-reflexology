@@ -214,6 +214,22 @@ a {
     padding-left: 1em;
 }
 
+#div-group-healers {
+    display: inline-block;
+    padding-left: 1em;
+    vertical-align: bottom;
+}
+
+#div-download {
+    display: inline-block;
+    padding-left: 1em;
+    vertical-align: bottom;
+
+}
+
+#download-button {
+    font-size: 12pt;
+}
 
 .div-class-selection-outer {
 
@@ -258,7 +274,7 @@ img[alt=classicon] {
     font-size: 16pt;
 }
 
-#button-demo {
+.reflexology-button {
     padding-top: .5em;
     padding-bottom: .5em;
     padding-left: 1em;

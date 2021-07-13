@@ -56,6 +56,14 @@ def generate_menu():
                 
                 
             ], id='div-metric-kpi-container'),
+            html.Div(id='div-season-selection', children=[
+                html.H4('Season', className='app__menu_title'),
+                html.Div(className='dash-bootstrap', 
+                         children=[
+                             dcc.Dropdown(id='season-selection', options=[],
+                                          multi=False, clearable=False)
+                         ])
+                ]),
             html.Div([
                 html.H4('Bracket', className='app__menu__title'),
                 dcc.RadioItems(options=[{'label': '2v2', 'value': '2v2'},

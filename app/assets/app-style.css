@@ -125,7 +125,7 @@ a {
 }
 
 #div-metric-kpi-container {
-    width : 40%;
+    width : 33%;
 }
 
 
@@ -168,8 +168,13 @@ a {
     background-color: #111;
 }
 
+#div-season-selection {
+    width: 14%;
+    float: left;
+}
+
 #div-dropdown-partner {
-    width : 40%;
+    width : 33%;
     float : left;
 
 }

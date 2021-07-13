@@ -38,6 +38,29 @@ MATCHUP_URL = '/matchup/<bracket>'
 HEALERS = ['Holy Paladin', 'Holy Priest', 'Discipline Priest',
            'Restoration Shaman', 'Restoration Druid', 'Mistweaver Monk']
 
+SEASON_LABELS = {
+    33: 'Shadowlands S4',    
+    32: 'Shadowlands S3',
+    31: 'Shadowlands S2',
+    30: 'Shadowlands S1',
+    29: 'BfA S4',
+    28: 'BfA S3',
+    27: 'BfA S2',
+    26: 'BfA S1',    
+    25: 'Legion S7',
+    24: 'Legion S6',
+    23: 'Legion S5',
+    22: 'Legion S4',
+    21: 'Legion S3',
+    20: 'Legion S2',
+    19: 'Legion S1'
+    }
+
+def get_season_label(k):
+    if k in SEASON_LABELS:
+        return SEASON_LABELS[k]
+    else:
+        return str(k)
 
 def timeit(func):
     def inner(*args, **kwargs):
@@ -65,7 +88,7 @@ FONT_SIZE1 = 14
 # For including a partner; need at least this many matches
 MATCH_THRESHOLD = 5
 
-CURRENT_SEASON = 30
+CURRENT_SEASON = 31
 
 app = dash.Dash('REFlex')
 
@@ -317,10 +340,11 @@ def get_player_match_count(data2v2, data3v3):
 @app.callback(
     [Output('partner1-selection', 'value'),
      Output('partner2-selection', 'value')],
-    [Input('bracket-selection', 'value')]
+    [Input('bracket-selection', 'value'),
+     Input('season-selection', 'value')]
     )
 @timeit
-def reset_partner_on_bracket_change(_):
+def reset_partner_on_bracket_or_season_change(bracket, season):
     return None, None
 
 
@@ -329,13 +353,15 @@ def reset_partner_on_bracket_change(_):
      Output('partner2-selection', 'options')],
     [Input('player-name', 'children'),
      Input('bracket-selection', 'value'),
+     Input('season-selection', 'value'),
      Input('partner1-selection', 'value'),
      Input('partner2-selection', 'value'),
      Input('rating-graph', 'selectedData')],
     [State('data-store', 'children')]
     )
 @timeit
-def update_partner_selection(player, bracket, partner1, partner2, selected, json_data):
+def update_partner_selection(player, bracket, season,
+                             partner1, partner2, selected, json_data):
 
     tic = time()
     logging.info('UPDATE PARTNER SELECTION')
@@ -343,7 +369,9 @@ def update_partner_selection(player, bracket, partner1, partner2, selected, json
         raise PreventUpdate
     logging.info('Updating partner selection')
     allData = json.loads(json_data)
-    bracketData = pd.DataFrame(allData[bracket])
+    allBracketData = pd.DataFrame(allData[bracket])
+    bracketData = allBracketData.loc[allBracketData.Season == int(season), :]
+    
 
     if selected is not None:
         idx = np.arange(bracketData.shape[0])
@@ -377,6 +405,7 @@ def update_partner_selection(player, bracket, partner1, partner2, selected, json
 
     toc = time()
     logging.info('update_partner_selection: %.3f s'%(toc-tic))
+    print(partner1Options)
 
     return partner1Options, partner2Options
 
@@ -417,11 +446,13 @@ def load_data(content, n_clicks):
         inputData = dataFile
                 
     data2v2, data3v3 = timeit(rio.parse_lua_file)(inputData)
+    
+    '''
     if 'Season' in data2v2.columns:
         data2v2 = data2v2.loc[data2v2.Season==CURRENT_SEASON, :]
     if 'Season' in data3v3.columns:
         data3v3 = data3v3.loc[data3v3.Season==CURRENT_SEASON, :]
-
+    '''
 
     if data2v2.shape[0] > 0:
         N = data2v2.shape[0]
@@ -489,13 +520,14 @@ def load_matchup_data(_):
     Output('hidden-comp-table', 'children'),
     [Input('partner1-selection', 'value'),
      Input('partner2-selection', 'value'),
+     Input('season-selection', 'value'),
      Input('bracket-selection', 'value'),
      Input('player-name', 'children'),
      Input('rating-graph', 'selectedData')],
     [State('data-store', 'children')]
     )
 @timeit
-def update_hidden_comp_table(partner1, partner2, bracket, 
+def update_hidden_comp_table(partner1, partner2, season, bracket, 
                              player_name, selected, json_data):
     logging.info('UPDATING HIDDEN COMP TABLE')
 
@@ -504,7 +536,8 @@ def update_hidden_comp_table(partner1, partner2, bracket,
     logging.info('Updating hidden comp table.')
     partners = [a for a in [partner1, partner2] if a is not None]
     allData = json.loads(json_data)
-    bracketData = pd.DataFrame(allData[bracket])
+    allBracketData = pd.DataFrame(allData[bracket])
+    bracketData = allBracketData.loc[allBracketData.Season == int(season), :]
 
     if selected is not None:
         idx = np.arange(bracketData.shape[0])
@@ -513,6 +546,7 @@ def update_hidden_comp_table(partner1, partner2, bracket,
 
         bracketData = bracketData.loc[keepIndex, :]
 
+    print(bracketData.head(10))
     if bracketData.shape[0] == 0:
         raise PreventUpdate
 
@@ -521,6 +555,7 @@ def update_hidden_comp_table(partner1, partner2, bracket,
 
     compTable = make_comp_table(filteredData, player_name).to_json()
 
+    print(compTable)
     return compTable
 
 
@@ -533,13 +568,15 @@ def update_hidden_comp_table(partner1, partner2, bracket,
     [Input('metric-selection', 'value'),
      Input('partner1-selection', 'value'),
      Input('partner2-selection', 'value'),
+     Input('season-selection', 'value'),
      Input('bracket-selection', 'value'),
      Input('radio-class-spec', 'value'),
      Input('player-name', 'children'),
      Input('rating-graph', 'selectedData')],
     [State('data-store', 'children')])
 @timeit
-def update_plots(metric, partner1, partner2, bracket, group_by,
+def update_plots(metric, partner1, partner2, season,
+                 bracket, group_by,
                  player, selected, json_data):
 
     logging.info('UPDATE PLOTS')
@@ -549,7 +586,9 @@ def update_plots(metric, partner1, partner2, bracket, group_by,
     logging.info('Updating plots.')
     partners = [a for a in [partner1, partner2] if a is not None]
     allData = json.loads(json_data)
-    bracketData = pd.DataFrame(allData[bracket])
+    allBracketData = pd.DataFrame(allData[bracket])
+    bracketData = allBracketData.loc[allBracketData.Season == int(season), :]
+    
 
     if selected is not None:
         idx = np.arange(bracketData.shape[0])
@@ -663,10 +702,6 @@ def display_comp_table(comp_data, class1, spec1, class2, spec2, group_healers):
             compTable = compTable.sort_values(by='N', ascending=False)\
                                  .drop('N', axis=1)
 
-
-
-
-    print(compTable)
 
 
     def _get_spec_markdown(x):
@@ -858,6 +893,7 @@ def update_spec2_selection(class2, class1, spec1, data):
      Output('metric-sessions-played', 'children'),
      Output('metric-rating-change', 'style')],
     [Input('bracket-selection', 'value'),
+     Input('season-selection', 'value'),
      Input('player-name', 'children'),
      Input('partner1-selection', 'value'),
      Input('partner2-selection', 'value'),
@@ -865,7 +901,7 @@ def update_spec2_selection(class2, class1, spec1, data):
     [State('data-store', 'children')]
     )
 @timeit
-def update_kpis(bracket, player, partner1, partner2, selected, json_data):
+def update_kpis(bracket, season, player, partner1, partner2, selected, json_data):
     logging.info('UPDATE KPIs')
     if json_data is None:
         raise PreventUpdate
@@ -874,6 +910,9 @@ def update_kpis(bracket, player, partner1, partner2, selected, json_data):
     allData = json.loads(json_data)
     partners = [p for p in [partner1, partner2] if p is not None]
     bracketData = pd.DataFrame(allData[bracket])
+    allBracketData = pd.DataFrame(allData[bracket])
+    bracketData = allBracketData.loc[allBracketData.Season == int(season), :]
+    
     
     if selected is not None:
         idx = np.arange(bracketData.shape[0])
@@ -930,6 +969,30 @@ def show_main_content(n_clicks, filename):
 
     return [{'display': 'none'}, {'display': 'block'}]
 
+
+@app.callback(
+    [Output('season-selection', 'options'),
+     Output('season-selection', 'value')],
+    [Input('data-store', 'children')]
+    )
+@timeit
+def update_season_selection(json_data):
+
+    logging.info('Updating season selection')
+    if json_data is None:
+        raise PreventUpdate
+    
+    allData = json.loads(json_data)
+
+    seasons = set()
+    for bracket in allData:
+        x = pd.DataFrame(allData[bracket])
+        seasons |= set(x['Season'])
+
+    sortedSeasons = list(seasons)[::-1]
+    seasonList = [{'label': get_season_label(k), 'value': k } for k in sortedSeasons
+                  if k > 0]
+    return seasonList, max(seasons)
     
 if __name__ == "__main__":
     app.run_server(host='0.0.0.0', port=8050, debug=True)

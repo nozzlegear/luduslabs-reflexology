@@ -96,7 +96,42 @@ translation = {'Protección': 'Protection',
                'Dévastation': 'Havoc',
                'Démonologie': 'Demonology',
                'Impie': 'Unholy',
-               'Hors-la-loi': 'Outlaw'
+               'Hors-la-loi': 'Outlaw',
+               "Стихии": "Elemental",
+               "Совершенствование": "Enhancement",
+               "Исцеление": "Restoration",
+               "Оружие": "Arms",
+               "Неистовство": "Fury",
+               "Защита": "Protection",
+               "Колдовство": "Affliction",
+               "Демонология": "Demonology",
+               "Разрушение": "Destruction",
+               "Послушание": "Discipline",
+               "Свет": "Holy",
+               "Тьма": "Shadow",
+               "Повелитель зверей": "Beast Mastery",
+               "Стрельба": "Marksmanship",
+               "Стрел": "Marksmanship",
+               "Выживание": "Survival",
+               "Ликвидация": "Assassination",
+               "Головорез": "Outlaw",
+               "Скрытность": "Subtlety",
+               "Тайная магия": "Arcane",
+               "Огонь": "Fire",
+               "Лед": "Frost",
+               "Хмелевар": "Brewmaster",
+               "Ткач туманов": "Mistweaver",
+               "Танцующий с ветром": "Windwalker",
+               "Воздаяние": "Retribution",
+               "Кровь": "Blood",
+               "Нечестивость": "Unholy",
+               "Баланс": "Balance",
+               "Сила зверя": "Feral",
+               "Страж": "Guardian",
+               "Истребление": "Havoc",
+               "Месть": "Vengeance",
+               "Повелительница зверей": "Beast Mastery",
+               "Танцующая с ветром": "Windwalker"
 }
 
 cols = ['Name', '', '', '', '', 'Team', 'Race', '', 'Class', 'Damage',
@@ -107,6 +142,8 @@ def translate(data):
     for col in specCols:
         data.loc[:, col] = data.loc[:, col].replace(translation)
 
+
+    import pdb; pdb.set_trace()        
     return data
 
 def fix_class(data):

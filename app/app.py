@@ -370,7 +370,10 @@ def update_partner_selection(player, bracket, season,
     logging.info('Updating partner selection')
     allData = json.loads(json_data)
     allBracketData = pd.DataFrame(allData[bracket])
-    bracketData = allBracketData.loc[allBracketData.Season == int(season), :]
+    if season is None:
+        bracketData = allBracketData
+    else:
+        bracketData = allBracketData.loc[allBracketData.Season == int(season), :]
     
 
     if selected is not None:
@@ -447,12 +450,6 @@ def load_data(content, n_clicks):
                 
     data2v2, data3v3 = timeit(rio.parse_lua_file)(inputData)
     
-    '''
-    if 'Season' in data2v2.columns:
-        data2v2 = data2v2.loc[data2v2.Season==CURRENT_SEASON, :]
-    if 'Season' in data3v3.columns:
-        data3v3 = data3v3.loc[data3v3.Season==CURRENT_SEASON, :]
-    '''
 
     if data2v2.shape[0] > 0:
         N = data2v2.shape[0]
@@ -537,7 +534,11 @@ def update_hidden_comp_table(partner1, partner2, season, bracket,
     partners = [a for a in [partner1, partner2] if a is not None]
     allData = json.loads(json_data)
     allBracketData = pd.DataFrame(allData[bracket])
-    bracketData = allBracketData.loc[allBracketData.Season == int(season), :]
+    if season is None:
+        bracketData = allBracketData
+    else:
+        bracketData = allBracketData.loc[allBracketData.Season == int(season), :]
+
 
     if selected is not None:
         idx = np.arange(bracketData.shape[0])
@@ -587,7 +588,10 @@ def update_plots(metric, partner1, partner2, season,
     partners = [a for a in [partner1, partner2] if a is not None]
     allData = json.loads(json_data)
     allBracketData = pd.DataFrame(allData[bracket])
-    bracketData = allBracketData.loc[allBracketData.Season == int(season), :]
+    if season is None:
+        bracketData = allBracketData
+    else:
+        bracketData = allBracketData.loc[allBracketData.Season == int(season), :]
     
 
     if selected is not None:
@@ -911,7 +915,10 @@ def update_kpis(bracket, season, player, partner1, partner2, selected, json_data
     partners = [p for p in [partner1, partner2] if p is not None]
     bracketData = pd.DataFrame(allData[bracket])
     allBracketData = pd.DataFrame(allData[bracket])
-    bracketData = allBracketData.loc[allBracketData.Season == int(season), :]
+    if season is None:
+        bracketData = allBracketData
+    else:
+        bracketData = allBracketData.loc[allBracketData.Season == int(season), :]
     
     
     if selected is not None:
@@ -987,7 +994,8 @@ def update_season_selection(json_data):
     seasons = set()
     for bracket in allData:
         x = pd.DataFrame(allData[bracket])
-        seasons |= set(x['Season'])
+        if x.shape[0] > 0:
+            seasons |= set(x['Season'])
 
     sortedSeasons = list(seasons)[::-1]
     seasonList = [{'label': get_season_label(k), 'value': k } for k in sortedSeasons

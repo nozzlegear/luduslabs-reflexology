@@ -142,8 +142,6 @@ def translate(data):
     for col in specCols:
         data.loc[:, col] = data.loc[:, col].replace(translation)
 
-
-    import pdb; pdb.set_trace()        
     return data
 
 def fix_class(data):

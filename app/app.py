@@ -30,8 +30,6 @@ sys.path.append(baseDir)
 
 from reflexology import rio, analysis
 
-MICROSERVICES_HOST = 'http://138.68.75.83:8182'
-#MICROSERVICES_HOST = 'http://localhost:8182'
 MATCHUP_URL = '/matchup/<bracket>'
 
 
@@ -55,6 +53,14 @@ SEASON_LABELS = {
     20: 'Legion S2',
     19: 'Legion S1'
     }
+
+
+if not os.path.isdir('/data'):
+    raise(RuntimeWarning('You have not mounted a data directory. Any uploaded data will not be saved.'))
+
+# Check if data directory structure exists, otherwise create it
+if not os.path.isdir('/data/reflex'):
+    os.mkdir('/data/reflex')
 
 def get_season_label(k):
     if k in SEASON_LABELS:
@@ -495,22 +501,6 @@ def load_data(content, n_clicks):
     logging.info('Data is %.2fKB in size.'%size)
 
     return jsonData, playerName
-
-
-'''
-@app.callback(
-    Output('opponent-data', 'children'),
-    [Input('data-store', 'children')]
-    )
-def load_matchup_data(_):
-    data = {}
-    for bracket in ['2v2', '3v3']:
-        url = MICROSERVICES_HOST + MATCHUP_URL.replace('<bracket>', bracket)
-        content = requests.get(url).content.decode()
-        data[bracket] = json.loads(content)
-
-    return json.dumps(data)
-'''
 
 
 @app.callback(

@@ -17,10 +17,11 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY . /app
 
-RUN mkdir /data/
+RUN mkdir /data
 
-RUN chown -R uwsgi /app &\
-    chgrp -R uwsgi /app
+RUN chown -R uwsgi /app /data &\
+    chgrp -R uwsgi /app /data &\
+
 
 EXPOSE 8183
 

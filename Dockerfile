@@ -20,7 +20,7 @@ COPY . /app
 RUN mkdir /data
 
 RUN chown -R uwsgi /app /data &\
-    chgrp -R uwsgi /app /data &\
+    chgrp -R uwsgi /app /data &
 
 
 EXPOSE 8183

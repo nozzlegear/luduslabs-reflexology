@@ -5,6 +5,7 @@ import dash_html_components as html
 import os
 import sys
 import logging
+import warnings
 import requests
 from flask import jsonify
 
@@ -20,6 +21,7 @@ import pandas as pd
 import numpy as np
 import json
 from time import time
+
 
 from layout import (generate_layout, BGCOLOR, FONT_COLOR,
                     generate_spec_graph, generate_rating_graph,
@@ -56,7 +58,7 @@ SEASON_LABELS = {
 
 
 if not os.path.isdir('/data'):
-    raise(RuntimeWarning('You have not mounted a data directory. Any uploaded data will not be saved.'))
+    warnings.warn(RuntimeWarning('You have not mounted a data directory. Any uploaded data will not be saved.'))
 
 # Check if data directory structure exists, otherwise create it
 if not os.path.isdir('/data/reflex'):

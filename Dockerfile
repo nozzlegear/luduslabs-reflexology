@@ -17,6 +17,8 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 
 COPY . /app
 
+RUN mkdir /data/reflex
+
 RUN chown -R uwsgi /app &\
     chgrp -R uwsgi /app
 

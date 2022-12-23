@@ -1,13 +1,11 @@
 import dash
-import dash_bootstrap_components as dbc
-import dash_core_components as dcc
-import dash_html_components as html
 import os
 import sys
 import logging
 import warnings
-import requests
-from flask import jsonify
+
+
+from furl import furl
 
 import base64
 import hashlib
@@ -22,10 +20,11 @@ import numpy as np
 import json
 from time import time
 
-
 from layout import (generate_layout, BGCOLOR, FONT_COLOR,
-                    generate_spec_graph, generate_rating_graph,
-                    generate_metric_menu, layout_comp_table, tableColumns)
+                    tableColumns)
+
+
+OUTPUT_DIR = '/data/reflex/lua/raw'
 
 baseDir = os.path.dirname(os.path.abspath(__file__)) + '/../'
 sys.path.append(baseDir)
@@ -39,6 +38,10 @@ HEALERS = ['Holy Paladin', 'Holy Priest', 'Discipline Priest',
            'Restoration Shaman', 'Restoration Druid', 'Mistweaver Monk']
 
 SEASON_LABELS = {
+    37: 'Dragonflight S4',
+    36: 'Dragonflight S3',
+    35: 'Dragonflight S2',
+    34: 'Dragonflight S1',
     33: 'Shadowlands S4',    
     32: 'Shadowlands S3',
     31: 'Shadowlands S2',
@@ -46,7 +49,7 @@ SEASON_LABELS = {
     29: 'BfA S4',
     28: 'BfA S3',
     27: 'BfA S2',
-    26: 'BfA S1',    
+    26: 'BfA S1',
     25: 'Legion S7',
     24: 'Legion S6',
     23: 'Legion S5',
@@ -65,8 +68,8 @@ if not os.path.isdir('/data/reflex'):
     os.mkdir('/data/reflex')
 
 def get_season_label(k):
-    if k in SEASON_LABELS:
-        return SEASON_LABELS[k]
+    if int(k) in SEASON_LABELS:
+        return SEASON_LABELS[int(k)]
     else:
         return str(k)
 
@@ -95,8 +98,6 @@ FONT_SIZE1 = 14
 
 # For including a partner; need at least this many matches
 MATCH_THRESHOLD = 5
-
-CURRENT_SEASON = 31
 
 app = dash.Dash('REFlex')
 
@@ -191,7 +192,8 @@ def make_spec_plot(data, col, player_name=None, group='spec'):
 
 
 @timeit
-def make_rating_plot(data, name='', partner1=None, partner2=None, keepIndex=None):
+def make_rating_plot(data, name='', partner1=None,
+                     partner2=None, keepIndex=None):
 
     SELF_COL = 'rgba(210, 40, 40, 0.9)'    
     partnerCol = 'rgb(210, 210, 210)'
@@ -332,10 +334,10 @@ def make_comp_table(data, playerName):
     return sortedCompTable
 
 
-def get_player_match_count(data2v2, data3v3):
+def get_player_match_count(*args):
 
     matchCountList = []
-    for data in [data2v2, data3v3]:
+    for data in args:
         playerNameFields = [k for k in data.columns if '_Name' in k]
         matchCount = pd.Series(data.loc[:,playerNameFields].values.ravel())\
                      .value_counts()
@@ -416,25 +418,32 @@ def update_partner_selection(player, bracket, season,
 
     toc = time()
     logging.info('update_partner_selection: %.3f s'%(toc-tic))
-    print(partner1Options)
 
     return partner1Options, partner2Options
 
     
 @app.callback(
     [Output('data-store', 'children'),
-     Output('player-name', 'children')],
+     Output('player-name', 'children'),
+     Output('linkshare', 'children')],
     [Input('upload', 'contents'),
-     Input('button-demo', 'n_clicks')]
+     Input('button-demo', 'n_clicks'),
+     Input('url', 'href')]
     )
 @timeit
-def load_data(content, n_clicks):
+def load_data(content, n_clicks, href):
+    f = furl(href)
+    if 'id' in f.args:
+        file_id = f.args['id'].split('/')[-1]
+    else:
+        file_id = None
+        
     logging.info('Loading data.')
     # So after upload:
     # 1) update the data-store div with hidden JSON data
     # 2) update the partner selection option
 
-    if content is None and n_clicks is None:
+    if content is None and n_clicks is None and file_id is None:
         logging.info('Content is None')
         raise PreventUpdate
 
@@ -447,17 +456,27 @@ def load_data(content, n_clicks):
         decoded = base64.b64decode(contentString)
         inputData = decoded.decode('utf-8')
         outputFile = hashlib.sha256(inputData.encode()).hexdigest()
-        if not os.path.isfile('/data/reflex/%s.lua'%outputFile):        
-            with open('/data/reflex/%s.lua'%outputFile, 'w',
+        outputFileFullPath = '%s/%s.lua'%(OUTPUT_DIR, outputFile)
+        if not os.path.isfile(outputFileFullPath):        
+            with open(outputFileFullPath, 'w',
                       encoding='utf-8') as f:
                 f.write(inputData)
-            os.chmod('/data/reflex/%s.lua'%outputFile, 444)
-            
+
+        link = outputFile
+
+    elif file_id is not None:
+        inputData = OUTPUT_DIR+'/'+file_id+'.lua'
+        link = file_id
+
     else:
         inputData = dataFile
-                
-    data2v2, data3v3 = timeit(rio.parse_lua_file)(inputData)
-    
+        link = ''
+
+    try:
+        data2v2, data3v3, dataShuffle = timeit(rio.parse_lua_file)(inputData)
+    except FileNotFoundError:
+        return '{}', 'No data found', 'https://luduslabs.org/reflexology'
+        
 
     if data2v2.shape[0] > 0:
         N = data2v2.shape[0]
@@ -485,6 +504,20 @@ def load_data(content, n_clicks):
 
         data3v3['session'] = analysis.get_sessions(data3v3)
 
+    if dataShuffle.shape[0] > 0:
+        N = dataShuffle.shape[0]
+        
+        dataShuffle = dataShuffle.dropna(axis=1, thresh=dataShuffle.shape[0]//2)\
+                         .dropna(subset=['T0P0_Class','T0P1_Class', 'T0P2_Class',
+                                         'T0P3_Class','T0P4_Class', 'T0P5_Class'],
+                                 how='any', axis=0)
+        M = dataShuffle.shape[0]
+        
+        if N != M:
+            logging.warn('REMOVED COLUMNS FROM DATA!')
+
+        dataShuffle['session'] = np.arange(0, dataShuffle.shape[0])
+
     matchCount = get_player_match_count(data2v2, data3v3)
     if np.sum(matchCount == matchCount.max()) == 1:
         playerName = matchCount.idxmax()
@@ -493,16 +526,13 @@ def load_data(content, n_clicks):
         # determine the player
         playerName = matchCount[matchCount==matchCount.max()].sample(1).index[0]
 
-    #data2v2 = filter_low_rating(data2v2, playerName)
-    #data3v3 = filter_low_rating(data3v3, playerName)
-                                
     jsonData = '{"2v2":%s, "3v3":%s}'%(data2v2.to_json(),
                                        data3v3.to_json())
 
     size = sys.getsizeof(jsonData)/1e3
     logging.info('Data is %.2fKB in size.'%size)
 
-    return jsonData, playerName
+    return jsonData, playerName, ['https://luduslabs.org/reflexology?id=%s' % link]
 
 
 @app.callback(
@@ -539,7 +569,6 @@ def update_hidden_comp_table(partner1, partner2, season, bracket,
 
         bracketData = bracketData.loc[keepIndex, :]
 
-    print(bracketData.head(10))
     if bracketData.shape[0] == 0:
         raise PreventUpdate
 
@@ -548,7 +577,6 @@ def update_hidden_comp_table(partner1, partner2, season, bracket,
 
     compTable = make_comp_table(filteredData, player_name).to_json()
 
-    print(compTable)
     return compTable
 
 
@@ -661,7 +689,6 @@ def aggregate_fields(x):
     )
 def export_to_csv(_, compTable):
     compTable = pd.DataFrame(compTable)
-    print(compTable.loc[:, 'Comp'].iloc[0])
 
     compTable.loc[:, 'Comp'] = compTable.loc[:, 'Comp']\
                                         .str.findall('(".*?")')\
@@ -953,17 +980,26 @@ def display_tab(tab):
         return {'display': 'none'}, {'display': 'none'}, {'display': 'block'}
 
 
-
 @app.callback(
     [Output('div-main-content', 'style'),
      Output('div-main-greet', 'style')],
-    [Input('button-demo', 'n_clicks'),
-     Input('upload', 'filename')]
+    [Input('data-store', 'children')],
+    [State('button-demo', 'n_clicks'),
+     State('upload', 'filename'),
+     State('url', 'href')
+     ]
     )
 @timeit
-def show_main_content(n_clicks, filename):
+def show_main_content(data, n_clicks, filename, href):
+    f = furl(href)
+    if 'id' in f.args:
+        file_id = f.args['id'].split('/')[-1]
+    else:
+        file_id = None
+    
     logging.info('SHOW MAIN CONTENT')
-    if (n_clicks is not None) or (filename is not None):
+    if (n_clicks is not None) or\
+       (filename is not None) or (file_id is not None):
         return [{'display': 'block'}, {'display': 'none'}]
 
     return [{'display': 'none'}, {'display': 'block'}]
@@ -982,17 +1018,19 @@ def update_season_selection(json_data):
         raise PreventUpdate
     
     allData = json.loads(json_data)
-
+    
     seasons = set()
     for bracket in allData:
         x = pd.DataFrame(allData[bracket])
         if x.shape[0] > 0:
             seasons |= set(x['Season'])
 
+    logging.info(seasons)
     sortedSeasons = list(seasons)[::-1]
     seasonList = [{'label': get_season_label(k), 'value': k } for k in sortedSeasons
                   if k > 0]
     return seasonList, max(seasons)
+    
     
 if __name__ == "__main__":
     app.run_server(host='0.0.0.0', port=8050, debug=True)

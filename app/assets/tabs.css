@@ -1,13 +1,15 @@
 
 /* Styling tabs */
 .menu-tab {
-    color : #000;
-    background-color : #000;
+    color : #ccc !important;
+    background: rgba(80, 98, 140, 1.0) !important;
+    border: 0 !important;
 }
 
-.menu-tab--selected {
-    color : #333;
-    background-color : #000;
+.tab--selected {
+    border: 0 !important;
+    color : #fff !important;
+    background: rgba(30, 48, 80, 1.0) !important;
 }
 
 #main-tab {
@@ -22,7 +24,7 @@
 
 .tabs-parent {
     color : #000;
-    background-color: #fff;
+    background-color: #0c3c53;
 
 }
 

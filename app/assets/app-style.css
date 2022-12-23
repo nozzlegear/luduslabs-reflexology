@@ -2,7 +2,7 @@
 body {
     font-family : Helvetica, Arial, sans-serif;
     color: #ccc;
-    background-color: #151515;
+    background-color: #37517e;
 
 }
 
@@ -23,6 +23,7 @@ a {
 
 #div-mother {
     width : 100%;
+    min-height: 200px;
 }
 
 #div-metric-menu {
@@ -59,7 +60,7 @@ a {
     margin-left: 2.5%;
     margin-right: 2.5%;
     width: 95%;
-    background-color: #151515;
+    background-color: #37517e;
     padding-bottom : 0.5%;
     padding-top : 0.25%;
     margin-bottom : 1%;
@@ -74,10 +75,13 @@ a {
     margin-right: 2%;
     padding-bottom:  1%;
     margin-bottom : 2%;
-    background-color: #151515;
+    background-color: #37517e;
 
 }
 
+.dash-cell {
+    text-align: center !important;
+}
 
 
 #div-bottom {
@@ -89,7 +93,7 @@ a {
 .div-metric-rating {
     /* Leave width and margins unchanged as this goes
        inside the div-metric-kpi-container */
-    background-color : #151515;
+    background-color : #37517e;
     width : 30%;
     text-align : center;
     margin-left : 1.6665%;
@@ -145,23 +149,23 @@ a {
 
 /* TABS */
 #tab-container {
-   background-color: #151515; 
+   background-color: #37517e; 
 }
 
 #main-tab {
-   background-color: #151515;
+   background-color: #37517e;
 }    
 
 .tabs-parent {
-    background-color: #f00;
+    background-color: #37517e;
 }
 
 #div-tab-main {
-    background-color: #151515;
+    background-color: #37517e;
 }
 
 #main-tab-parent {
-    background-color: #151515;
+    background-color: #37517e;
 }
 
 #div-tab-content {
@@ -174,7 +178,7 @@ a {
 }
 
 #div-dropdown-partner {
-    width : 33%;
+    width : 25%;
     float : left;
 
 }
@@ -241,22 +245,27 @@ a {
 }
 
 #div-comp-menu {
-    width : 100%;
-    height : 15%;
-    background-color : #151515;
+    width: 100%;
+    height: 15%;
+    background-color: #37517e;
     padding-bottom: 1em;
 }
 
 .app__datatable {
-    background-color : #151515;
+    background-color: #37517e;
 }
 
-.Select .Select-value {
-  color: #fff;
+.Select-value {
+    background: rgba(30, 48, 80, 1.0) !important;
+}
+
+.Select-control{
+    background: rgba(30, 48, 80, 1.0) !important;
+    color: #fff !important;
 }
 
 .Select-value-label {
-    color: #aaa;
+    color: #fff !important;
 }
 
 img[alt=classicon] {
@@ -284,7 +293,7 @@ img[alt=classicon] {
     padding-bottom: .5em;
     padding-left: 1em;
     padding-right: 1em;
-    background-color: #333;
+    background-color: rgba(30, 48, 80, 1.0);
     color: #cecece;
     font-size: 16pt;
     border: 1px solid #666;
@@ -295,10 +304,45 @@ img[alt=classicon] {
     text-align: center;
 }
 
-#upload-div {
+#div-upload {
+    margin-top: 1cm;
     width: 100%;
 }
 
 #tip-time-range {
     margin-top: 1em;
+}
+
+
+.main-loader {
+    vertica-align: bottom;
+}
+
+#link-share {
+    font-size: 8pt;
+}
+
+#div-linkshare {
+    display: inline-block;
+    padding-top: 4em;
+}
+
+#linkshare {
+    display: none;
+    background-color: #f00;
+}
+
+#p-linkshare {
+    font-size: 10pt;
+    display: inline;
+    margin: 0;
+}
+
+#clipboard {
+    display: inline;
+    font-size: 14pt;
+}
+
+#data-store {
+    display: none;
 }

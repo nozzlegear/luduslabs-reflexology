@@ -1,5 +1,6 @@
 import luadata
 import pandas as pd
+from time import time
 
 translation = {'Protección': 'Protection',
                'Guardián': 'Guardian',
@@ -137,6 +138,18 @@ translation = {'Protección': 'Protection',
 cols = ['Name', '', '', '', '', 'Team', 'Race', '', 'Class', 'Damage',
         'Healing', 'Rating', 'Rating change', '', '', 'Spec', '']
 
+
+def timeit(func):
+    def inner(*args, **kwargs):
+        tic = time()
+        x = func(*args, **kwargs)
+        toc = time()
+        print('%s took %.2f s'%(func.__name__, toc-tic))
+        return x
+
+    return inner
+
+
 def translate(data):
     specCols = [k for k in data.columns if '_Spec' in k]
     for col in specCols:
@@ -155,12 +168,27 @@ def fix_class(data):
 def parse_player(player):
     return [(cols[i], player[k]) for i, k in enumerate(range(0, len(player), 3))]
 
+@timeit
+def get_arena(data, bracket, rated=True, soloshuffle=False):
 
-def get_arena(data, bracket, rated=True):
     filteredData = [x for x in data if type(x) == dict]
     playersNum = {'2v2': 4, '3v3': 6}[bracket.lower()]
-    return [x for x in filteredData if x['PlayersNum'] == playersNum
-            and x['isArena'] and x['isRated'] == rated]
+    z = []
+    for x in filteredData:
+        if 'isSoloShuffle' in x:
+            is_solo_shuffle = x['isSoloShuffle']
+        else:
+            is_solo_shuffle = False
+
+
+        if x['PlayersNum'] == playersNum\
+            and x['isArena'] and x['isRated'] == rated and not x['isBrawl']\
+            and is_solo_shuffle == soloshuffle:
+
+            z.append(x)
+
+
+    return z
 
 
 def get_rbg(data, rated=True):
@@ -185,6 +213,7 @@ def parse_match_data(match):
                                        'Version', 'Time', 'PlayerSide',
                                        'Winner']}
 
+    
     mmrData = {'T0_MMR': match['TeamData'][0][9],
                'T1_MMR': match['TeamData'][3][9]}
 
@@ -194,16 +223,6 @@ def parse_match_data(match):
 
     return data
 
-from time import time
-def timeit(func):
-    def inner(*args, **kwargs):
-        tic = time()
-        x = func(*args, **kwargs)
-        toc = time()
-        print('%s took %.2f s'%(func.__name__, toc-tic))
-        return x
-
-    return inner
 
 def capitalise_class(df):
     classCols = [k for k in df.columns if '_Class' in k]
@@ -211,6 +230,7 @@ def capitalise_class(df):
         df.loc[:, c] = df[c].str.capitalize()
 
     return df
+
 
 def parse_lua_file(file_name):
     if len(file_name) < 100:
@@ -220,11 +240,14 @@ def parse_lua_file(file_name):
 
     raw2v2 = get_arena(data['REFlexDatabase'], '2v2')
     raw3v3 = get_arena(data['REFlexDatabase'], '3v3')
-
+    rawSolo = get_arena(data['REFlexDatabase'], '3v3', soloshuffle=True)
+    
     match2v2 = fix_class(translate(capitalise_class(pd.DataFrame([parse_match_data(k) for k in raw2v2]))))
     match3v3 = fix_class(translate(capitalise_class(pd.DataFrame([parse_match_data(k) for k in raw3v3]))))
+    matchSs = fix_class(translate(capitalise_class(pd.DataFrame([parse_match_data(k) for k in rawSolo]))))
 
-    return match2v2, match3v3
+    return match2v2, match3v3, matchSs
+
 
 def parse_lua_file_rbg(file_name):
     if len(file_name) < 100:

@@ -1,10 +1,8 @@
-import dash_html_components as html
-import dash_core_components as dcc
-import dash_table
+from dash import html, dcc, dash_table
 import requests
 
 FONT_COLOR = '#d0d0d0'
-BGCOLOR = 'rgba(0,0,0,0)'
+BGCOLOR = 'rgba(30, 48, 80, 0.0)'
 
 TABLE_HEIGHT = 400
 
@@ -20,15 +18,6 @@ tableColumns = ['Comp', 'Games', 'Record', 'Win rate (%)',
                 'Avg rating change', 'Total rating change']
 
 NO_MARGIN = {'margin': '0px'}
-
-
-TAB_STYLE = {'backgroundColor': '#222',
-             'borderBottom': '0',
-             'color': '#fff'}
-
-SELECTED_TAB_STYLE = {'backgroundColor': '#111',
-                      'borderBottom': '0',
-                      'color': '#fff'}
 
 
 def generate_menu():
@@ -84,30 +73,29 @@ def generate_menu():
                     
                 ], id='div-dropdown-partner2', style={'display': 'none'},
                          className='dash-bootstrap')
-            ], id='div-dropdown-partner')
+            ], id='div-dropdown-partner'),
+            generate_link_share()
         ], id='div-radio-partner')
+
     ], id='div-main-menu')
 
 
 def generate_main_content():
     return html.Div([
+        dcc.Location(id='url', refresh=False),
         html.Div([dcc.Tabs(id='main-tab', value='graph',
                            parent_className='tabs-parent',
                            children=[
                                dcc.Tab(label='Graphical overview', value='graph',
-                                       className='menu-tab',
-                                       style=TAB_STYLE,
-                                       selected_style=SELECTED_TAB_STYLE),
-
+                                       className='menu-tab'),
                                dcc.Tab(label='Compositions', value='comp',
-                                       className='menu-tab',
-                                       style=TAB_STYLE,
-                                       selected_style=SELECTED_TAB_STYLE)
+                                       className='menu-tab')
                                # dcc.Tab(label='Analysis', value='analysis',
                                #         className='menu-tab',
                                #         style=TAB_STYLE,
                                #         selected_style=SELECTED_TAB_STYLE)
-                           ])], id='tab-container'),
+                           ])
+        ], id='tab-container'),
         html.Div(id='div-tab-1', className='div-tab-content',
                  children=[generate_metric_menu(),
                 html.Div(id='div-graphs',children=[
@@ -123,14 +111,12 @@ def generate_main_content():
 
 
 def generate_spec_graph():
-    return dcc.Loading(
-        id='loading-spec-graph',
-        type='default',
-        children=html.Div([
-            dcc.Graph(id='spec-graph', style={'width': '100%',
-                                              'display': 'none'},
-                      config={'displayModeBar': False})],
-                          id='div-spec-graph'))
+    return html.Div(children=[
+        dcc.Graph(id='spec-graph',
+                  style={'width': '100%',
+                         'display': 'none'},
+                  config={'displayModeBar': False})],
+                    id='div-spec-graph')
 
 
 def generate_metric_menu():
@@ -158,14 +144,11 @@ def generate_metric_menu():
 
 
 def generate_rating_graph():
-    return dcc.Loading(
-        id='loading-rating-graph',
-        type='default',
-        children=html.Div([
-            dcc.Graph(id='rating-graph',
-                      style={'width': '90%', 'display': 'none'},
-                      config={'displayModeBar': False})
-        ], id='div-rating-graph'))
+    return html.Div([
+        dcc.Graph(id='rating-graph',
+                  style={'width': '90%', 'display': 'none'},
+                  config={'displayModeBar': False})
+    ], id='div-rating-graph')
 
 
 def generate_comp_menu():
@@ -215,11 +198,11 @@ def layout_comp_table():
                                  style_table={'height': TABLE_HEIGHT,
                                               'overflowY': 'scroll'},
                                  style_header={'height': 'auto',
-                                               'font-size': '15pt',
-                                               'font-family':
+                                               'fontSize': '15pt',
+                                               'fontFamily':
                                                'Helvetica, Arial, sans-serif',
-                                               'backgroundColor': '#000',
-                                               'text-align': 'center'},
+                                               'backgroundColor': 'rgba(30, 48, 80, 1.0)',
+                                               'textAlign': 'center'},
                                  style_cell={'height': 'auto',
                                              'whiteSpace': 'normal'},
                                  css=[dict(
@@ -228,12 +211,12 @@ def layout_comp_table():
                                      min-width: 10vw;
                                      display: block;
                                      font-size: 12pt;
-                                     text-align : center;
-                                     padding : 0;
+                                     text-align: center;
+                                     padding: 0;
                                      '''),
                                       dict(selector='tr:hover',
-                                           rule='background-color:#111')],
-                                 style_data={'backgroundColor': BGCOLOR})
+                                           rule='background-color: rgba(30, 48, 80, 0.5)')],
+                                 style_data={'backgroundColor': 'rgba(30, 48, 80, 0.8)' })
         ], id='div-comp-content')], id='div-main-right')
 
 
@@ -275,7 +258,7 @@ def generate_logo():
     return html.Div([html.Img(src='/static/logo.png',
                               style={'width': '180px',
                                      'align': 'center'})],
-                    style={'text-align': 'center', 'width':'100%'})
+                    style={'textAlign': 'center', 'width':'100%'})
 
 
 def generate_upload_menu():
@@ -292,7 +275,7 @@ def generate_upload_menu():
                          'borderWidth': '1px',
                          'borderStyle': 'dashed',
                          'borderRadius': '5px',
-                         'textAlign':'center',
+                         'textAlign': 'center',
                          'margin': '10px'
                      },
                      multiple=False,
@@ -308,23 +291,37 @@ def generate_character_confirmation():
     ], id='player-name-toggle-div')
 
 
-def generate_layout():
+def generate_link_share():
     return html.Div([
-        html.Div([
-            html.Div(id='data-store', style={'display': 'none'}),
-            html.Div(id='opponent-data', style={'display': 'none'}),            
-            html.Div(id='player-name', style={'display': 'none'}),
-            html.Div(id='hidden-comp-table', style={'display': 'none'}),
-            html.Div(id='player-name-validation', style={'display': 'none'}),
-            generate_menu(),
-            html.Div([
-                generate_main_content()
-            ], id='div-main-mother')
-        ], id='div-main-content', style={'display' : 'none'}),
+        html.P(
+            id="linkshare",
+            children=["https://luduslabs.org/reflexology"]
+        ),
+        html.P('Shareable link', id='p-linkshare'),
+        dcc.Clipboard(
+            id='clipboard',
+            target_id="linkshare",
+            title="Copy link to clipboard",
+        )], id='div-linkshare')
 
-        html.Div(children=[
-            generate_greeting_page(),
-            generate_upload_menu(),
-            generate_logo()],
-                 id='div-main-greet')
+
+def generate_layout():
+    return html.Div(children=[html.Div([
+        html.Div(id='opponent-data', style={'display': 'none'}),
+        html.Div(id='player-name', style={'display': 'none'}),
+        html.Div(id='hidden-comp-table', style={'display': 'none'}),
+        html.Div(id='player-name-validation', style={'display': 'none'}),
+        generate_menu(),
+        html.Div([
+            generate_main_content()
+        ], id='div-main-mother')
+    ], id='div-main-content', style={'display': 'none'}),
+                              html.Div(children=[
+                                  generate_greeting_page(),
+                                  dcc.Loading(id='loading-data-store',
+                                              type='circle',
+                                              children=html.Div(id='data-store')),
+                                  generate_upload_menu(),
+                                  generate_logo()], id='div-main-greet',
+                                       style={'display': 'block'})
     ], id='div-mother')
